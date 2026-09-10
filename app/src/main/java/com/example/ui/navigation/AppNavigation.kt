@@ -68,7 +68,7 @@ fun MainAppScaffold(container: AppContainer, onRefreshLocation: () -> Unit, isRe
             composable(Screen.Dua.route) { val vm = androidx.lifecycle.viewmodel.compose.viewModel { DuaViewModel(container.duaRepository) }; DuaScreen(vm) }
             composable(Screen.Dzikr.route) { val context = androidx.compose.ui.platform.LocalContext.current; val vm = androidx.lifecycle.viewmodel.compose.viewModel { DzikrViewModel(container.dzikrRepository, context.applicationContext) }; DzikrScreen(vm) }
             composable(Screen.Calendar.route) { val vm = androidx.lifecycle.viewmodel.compose.viewModel { CalendarViewModel(container.calendarRepository) }; HijriCalendarScreen(vm) }
-            composable(Screen.Settings.route) { val vm = androidx.lifecycle.viewmodel.compose.viewModel { SettingsViewModel(container.settingsRepository, container.locationProvider) }; SettingsScreen(vm) }
+            composable(Screen.Settings.route) { val vm = androidx.lifecycle.viewmodel.compose.viewModel { SettingsViewModel(container.settingsRepository, container.locationProvider) }; EnhancedSettingsScreen(vm) }
         }
     }
 }
