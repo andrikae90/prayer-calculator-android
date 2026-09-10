@@ -18,59 +18,29 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.math.tan
 
 /**
- * Technical Astronomical Prayer Time Calculation Engine.
+ * Astronomical prayer-time engine.
  *
- * ==============================================================================
- * 1. FORMULA & METHODOLOGY SPECIFICATION
- * ==============================================================================
- * This engine calculates solar prayer times using celestial mechanics algorithms:
+ * KEMENAG_INDONESIA follows the currently documented Indonesian Kemenag parameter
+ * profile used in local Kemenag schedules: Subuh -20°, Isya -18°, Asar standard
+ * (shadow factor 1), and an explicit 2-minute ihtiyat for the prayer-time output.
+ * Sunrise/Maghrib use the apparent solar altitude with semidiameter/refraction and
+ * horizon dip derived from observer elevation.
  *
- * A. Julian Day (JD) & Astronomical Epoch:
- *    JD = floor(365.25 * (Y + 4716)) + floor(30.6001 * (M + 1)) + D + B - 1524.5
- *    where B = 2 - A + floor(A / 4) for Gregorian calendar (A = floor(Y / 100)).
- *    d = JD - 2451545.0 (Days elapsed since J2000.0 epoch).
- *
- * B. Low-Precision Solar Coordinates:
- *    - Solar Mean Anomaly (g): g = 357.529° + 0.98560028° * d
- *    - Solar Mean Longitude (q): q = 280.459° + 0.98564736° * d
- *    - Ecliptic Longitude (L): L = q + 1.915° * sin(g) + 0.020° * sin(2*g)
- *    - Obliquity of the Ecliptic (e): e = 23.439° - 0.00000036° * d
- *    - Solar Declination (δ): δ = arcsin(sin(e) * sin(L))
- *    - Right Ascension (RA): α = atan2(cos(e) * sin(L), cos(L)) / 15.0 (in hours)
- *    - Equation of Time (EqT): EqT = (q / 15.0) - α (in hours)
- *
- * C. Solar Transit (Solar Noon / Zawal):
- *    Noon = 12.0 + timezoneOffset - (longitude / 15.0) - EqT
- *
- * D. Hour Angle Equation:
- *    cos(H) = (sin(altitude) - sin(latitude) * sin(δ)) / (cos(latitude) * cos(δ))
- *    H = arccos(clamp(cos(H), -1, 1)) / 15.0 (in hours)
- *
- * E. Altitudes used:
- *    - Sunrise / Terbit: -0.8333° (atmospheric refraction 34' + sun semidiameter 16')
- *    - Sunset: -0.8333°
- *    - Subuh / Fajr: Method-specific (Kemenag: -20.0°)
- *    - Isya / Isha: Method-specific (Kemenag: -18.0°)
- *    - Ashar: Altitude where shadow = noon shadow + N * object height
- *      alt_asr = -atan(N + tan(|latitude - δ|)) where N = shadow factor (1.0 standard, 2.0 Hanafi)
- *    - Imsak: fajrHours - (imsakIntervalMinutes / 60.0)
- *
- * ==============================================================================
- * 2. LIMITATIONS & WHY THIS IS NOT IDENTICAL TO OFFICIAL KEMENAG RI TABLES
- * ==============================================================================
- * This class uses standard astronomical hisab formulas. While configured with Kemenag
- * parameters (-20° Fajr, -18° Isha), it must NOT be claimed as an official Kemenag RI
- * synchronization because:
- * 1. Kemenag RI's Badan Hisab Rukyat (BHR) uses high-precision Ephemeris (VSOP87/ELP2000
- *    or Nautical Almanac), not low-precision solar approximation.
- * 2. BHR accounts for observer altitude above sea level (irtifa' / dip of horizon).
- * 3. Kemenag applies regional calibration and rounds with localized ihtiyat (+2 to +3 minutes).
- * 4. Official schedule requires verification against local Kanwil Kemenag tables.
+ * This is an independent implementation of the Kemenag parameter/method profile;
+ * it is NOT a network connection to Kemenag and is not marked as an official
+ * Kemenag-published table until results are validated against the relevant local
+ * Kemenag schedule.
  */
 object PrayerCalculator {
+
+    private const val KEMENAG_FAJR_ANGLE = -20.0
+    private const val KEMENAG_ISHA_ANGLE = -18.0
+    private const val DEFAULT_APPARENT_HORIZON_DEGREES = 0.8333
+    private const val KEMENAG_IHTIYAT_MINUTES = 2
 
     private fun d2r(d: Double): Double = d * Math.PI / 180.0
     private fun r2d(r: Double): Double = r * 180.0 / Math.PI
@@ -100,8 +70,16 @@ object PrayerCalculator {
     }
 
     /**
-     * Computes full prayer calculation result with rigorous astronomical telemetry.
+     * Observer-horizon altitude used for sunrise/sunset.
+     * Kemenag schedules account for semidiameter + atmospheric refraction + dip of
+     * the visible horizon. Dip is approximated from observer elevation in metres.
      */
+    private fun apparentHorizonAltitude(elevationMeters: Double): Double {
+        val safeElevation = elevationMeters.coerceAtLeast(0.0)
+        val dipDegrees = 0.0347 * sqrt(safeElevation)
+        return -(DEFAULT_APPARENT_HORIZON_DEGREES + dipDegrees)
+    }
+
     fun calculate(
         date: LocalDate,
         latitude: Double,
@@ -113,7 +91,8 @@ object PrayerCalculator {
         imsakIntervalMinutes: Int = 10,
         ihtiyatMinutes: Int = 2,
         roundingMode: PrayerRoundingMode = PrayerRoundingMode.CEIL,
-        customOffsets: Map<PrayerType, Int> = emptyMap()
+        customOffsets: Map<PrayerType, Int> = emptyMap(),
+        elevationMeters: Double = 0.0
     ): PrayerCalculationResult {
         val year = date.year
         val month = date.monthValue
@@ -122,48 +101,42 @@ object PrayerCalculator {
         val jd = julianDate(year, month, day)
         val d = jd - 2451545.0
 
-        // Celestial coordinates
+        // Solar coordinates using the compact astronomical ephemeris approximation.
         val g = fixAngle(357.529 + 0.98560028 * d)
         val q = fixAngle(280.459 + 0.98564736 * d)
         val l = fixAngle(q + 1.915 * sin(d2r(g)) + 0.020 * sin(d2r(2 * g)))
-
         val e = 23.439 - 0.00000036 * d
-        val sinDelta = sin(d2r(e)) * sin(d2r(l))
-        val delta = r2d(asin(sinDelta))
-
+        val delta = r2d(asin(sin(d2r(e)) * sin(d2r(l))))
         val ra = fixAngle(r2d(atan2(cos(d2r(e)) * sin(d2r(l)), cos(d2r(l))))) / 15.0
         val eqt = (q / 15.0) - ra
-
-        // Solar noon (transit) in hours
         val noon = fixHour(12.0 + timezoneOffsetHours - (longitude / 15.0) - eqt)
 
         fun hourAngle(altitude: Double): Double {
             val cosH = (sin(d2r(altitude)) - sin(d2r(latitude)) * sin(d2r(delta))) /
-                    (cos(d2r(latitude)) * cos(d2r(delta)))
-            val clamped = cosH.coerceIn(-1.0, 1.0)
-            return r2d(acos(clamped)) / 15.0
+                (cos(d2r(latitude)) * cos(d2r(delta)))
+            return r2d(acos(cosH.coerceIn(-1.0, 1.0))) / 15.0
         }
 
-        // Angles
-        val fajrH = hourAngle(method.fajrAngleDegrees)
-        val sunriseH = hourAngle(-0.8333)
+        val isKemenag = method == PrayerCalculationMethod.KEMENAG_INDONESIA
+        val fajrAngle = if (isKemenag) KEMENAG_FAJR_ANGLE else method.fajrAngleDegrees
+        val ishaAngle = if (isKemenag) KEMENAG_ISHA_ANGLE else method.ishaAngleDegrees
+        val effectiveIhtiyat = if (isKemenag) KEMENAG_IHTIYAT_MINUTES else ihtiyatMinutes
+        val sunriseAltitude = apparentHorizonAltitude(if (isKemenag) elevationMeters else 0.0)
 
-        // Asr angle with configurable shadow factor (1.0 vs 2.0)
-        // FiQH & Astronomical formula: cot(alt) = shadowFactor + tan(|latitude - delta|)
-        // Therefore: alt = arctan(1.0 / (shadowFactor + tan(|latitude - delta|)))
-        val shadowFactor = asrJuristicMethod.shadowFactor
+        val fajrH = hourAngle(fajrAngle)
+        val sunriseH = hourAngle(sunriseAltitude)
+
+        val shadowFactor = if (isKemenag) AsrJuristicMethod.STANDARD.shadowFactor else asrJuristicMethod.shadowFactor
         val asrAlt = r2d(atan(1.0 / (shadowFactor + tan(d2r(kotlin.math.abs(latitude - delta))))))
         val asrH = hourAngle(asrAlt)
+        val ishaH = hourAngle(ishaAngle)
 
-        val ishaH = hourAngle(method.ishaAngleDegrees)
-
-        // Raw astronomical times in hours
         val fajrRaw = noon - fajrH
         val sunriseRaw = noon - sunriseH
-        val dhuhrRaw = noon + (ihtiyatMinutes / 60.0) // 2 min ihtiyat after transit
+        val dhuhrRaw = noon + (effectiveIhtiyat / 60.0)
         val asrRaw = noon + asrH
         val sunsetRaw = noon + sunriseH
-        val maghribRaw = sunsetRaw + (ihtiyatMinutes / 60.0) // Sunset + ihtiyat
+        val maghribRaw = sunsetRaw + (effectiveIhtiyat / 60.0)
         val ishaRaw = noon + ishaH
         val imsakRaw = fajrRaw - (imsakIntervalMinutes / 60.0)
 
@@ -171,19 +144,16 @@ object PrayerCalculator {
             val userOffset = customOffsets[prayerType] ?: 0
             val normalizedHours = fixHour(rawHours)
             val totalSecondsExact = normalizedHours * 3600.0 + (userOffset * 60.0)
-
             val totalMinutesRounded = when (roundingMode) {
                 PrayerRoundingMode.NONE -> (totalSecondsExact / 60.0).toInt()
                 PrayerRoundingMode.FLOOR -> floor(totalSecondsExact / 60.0).toInt()
                 PrayerRoundingMode.NEAREST -> Math.round(totalSecondsExact / 60.0).toInt()
                 PrayerRoundingMode.CEIL -> kotlin.math.ceil(totalSecondsExact / 60.0).toInt()
             }
-
             val finalHour = ((totalMinutesRounded / 60) % 24 + 24) % 24
             val finalMinute = ((totalMinutesRounded % 60) + 60) % 60
             val formatted = String.format(Locale.US, "%02d:%02d", finalHour, finalMinute)
-            val localTime = LocalTime.of(finalHour, finalMinute)
-            return Pair(formatted, localTime)
+            return formatted to LocalTime.of(finalHour, finalMinute)
         }
 
         val imsakFormatted = formatTime(imsakRaw, PrayerType.IMSAK)
@@ -210,7 +180,7 @@ object PrayerCalculator {
             longitude = longitude,
             timezone = timezoneId,
             calculationMethod = method,
-            asrJuristicMethod = asrJuristicMethod,
+            asrJuristicMethod = if (isKemenag) AsrJuristicMethod.STANDARD else asrJuristicMethod,
             imsakIntervalMinutes = imsakIntervalMinutes,
             imsak = imsakFormatted.first,
             fajr = fajrFormatted.first,
@@ -223,13 +193,10 @@ object PrayerCalculator {
             solarDeclinationDegrees = delta,
             equationOfTimeMinutes = eqt * 60.0,
             rawTimes = rawTimesMap,
-            isOfficialVerifiedKemenag = false // Explicitly audited: algorithmic approximation
+            isOfficialVerifiedKemenag = false
         )
     }
 
-    /**
-     * Backward-compatible helper for UI consumers returning List<PrayerScheduleItem>.
-     */
     fun calculatePrayerTimes(
         calendar: Calendar,
         latitude: Double,
@@ -242,7 +209,8 @@ object PrayerCalculator {
         asharOffset: Int = 0,
         maghribOffset: Int = 0,
         isyaOffset: Int = 0,
-        asrJuristicMethod: AsrJuristicMethod = AsrJuristicMethod.STANDARD
+        asrJuristicMethod: AsrJuristicMethod = AsrJuristicMethod.STANDARD,
+        elevationMeters: Double = 0.0
     ): List<PrayerScheduleItem> {
         val localDate = LocalDate.of(
             calendar.get(Calendar.YEAR),
@@ -273,7 +241,8 @@ object PrayerCalculator {
             timezoneOffsetHours = timezoneOffset,
             method = mappedMethod,
             asrJuristicMethod = asrJuristicMethod,
-            customOffsets = offsets
+            customOffsets = offsets,
+            elevationMeters = elevationMeters
         )
 
         return listOf(
