@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -14,6 +15,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -51,20 +53,23 @@ import com.example.ui.splash.SplashScreen
 @Composable
 fun MainAppScaffold(
     container: AppContainer,
+    onRefreshLocation: () -> Unit,
     navController: NavHostController = rememberNavController()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
     val isSplashScreen = currentRoute == Screen.Splash.route
+    val isHomeScreen = currentRoute == Screen.Home.route
     val isBottomNavVisible = !isSplashScreen && (
-            currentRoute == Screen.Home.route ||
+            isHomeScreen ||
             currentRoute == Screen.Salat.route ||
             currentRoute == Screen.Quran.route ||
             currentRoute == Screen.More.route
     )
 
     val topBarTitle = when (currentRoute) {
+        Screen.Home.route -> "Muslim Masan"
         Screen.Qibla.route -> "Arah Kiblat"
         Screen.Dua.route -> "Kumpulan Doa"
         Screen.Dzikr.route -> "Dzikir & Tasbih"
@@ -84,17 +89,38 @@ fun MainAppScaffold(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Kembali"
-                            )
+                        if (!isHomeScreen) {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Kembali"
+                                )
+                            }
+                        }
+                    },
+                    actions = {
+                        if (isHomeScreen) {
+                            TextButton(
+                                onClick = onRefreshLocation,
+                                modifier = Modifier.testTag("refresh_location_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Refresh,
+                                    contentDescription = "Perbarui Lokasi",
+                                    modifier = Modifier.padding(end = androidx.compose.ui.unit.dp)
+                                )
+                                Text(
+                                    text = "Perbarui Lokasi",
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+                                )
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
                         titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        navigationIconContentColor = MaterialTheme.colorScheme.primary
+                        navigationIconContentColor = MaterialTheme.colorScheme.primary,
+                        actionIconContentColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
