@@ -28,10 +28,16 @@ class SettingsViewModel(
 
     fun selectLocation(location: UserLocation) {
         locationProvider.setManualLocation(location)
-        settingsRepository.updateSettings {
-            it.copy(cityName = location.cityName, latitude = location.latitude, longitude = location.longitude)
-        }
+        settingsRepository.updateSettings { it.copy(cityName = location.cityName, latitude = location.latitude, longitude = location.longitude) }
         _locationResults.value = emptyList()
+    }
+
+    fun useGpsLocation() {
+        viewModelScope.launch {
+            val location = locationProvider.getCurrentLocation() ?: return@launch
+            locationProvider.setManualLocation(location)
+            settingsRepository.updateSettings { it.copy(cityName = location.cityName, latitude = location.latitude, longitude = location.longitude) }
+        }
     }
 
     fun searchLocations(query: String) {
@@ -42,7 +48,6 @@ class SettingsViewModel(
             _isSearchingLocation.value = false
         }
     }
-
     fun clearLocationResults() { _locationResults.value = emptyList() }
     fun updateCalculationMethod(method: CalculationMethod) { settingsRepository.updateSettings { it.copy(calculationMethod = method) } }
     fun updateTheme(theme: AppThemeSetting) { settingsRepository.updateSettings { it.copy(themeSetting = theme) } }
