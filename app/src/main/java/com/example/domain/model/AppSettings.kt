@@ -7,16 +7,17 @@ enum class AppThemeSetting(val title: String) {
 }
 
 enum class CalculationMethod(val title: String, val description: String) {
-    KEMENAG("Kemenag RI", "Kementerian Agama Republik Indonesia (Fajr 20°, Isha 18°)"),
-    MWL("Muslim World League", "Liga Muslim Dunia (Fajr 18°, Isha 17°)"),
-    EGYPT("Egyptian General Authority", "Otoritas Umum Mesir (Fajr 19.5°, Isha 17.5°)"),
-    UMM_AL_QURA("Umm Al-Qura, Makkah", "Universitas Umm Al-Qura (Fajr 18.5°, Isha 90 min)")
+    KEMENAG("Kemenag RI", "Kementerian Agama Republik Indonesia (Subuh 20°, Isya 18°)"),
+    MWL("Muslim World League", "Liga Muslim Dunia (Subuh 18°, Isya 17°)"),
+    EGYPT("Egyptian General Authority", "Otoritas Umum Mesir (Subuh 19.5°, Isya 17.5°)"),
+    UMM_AL_QURA("Umm Al-Qura, Makkah", "Universitas Umm Al-Qura (Subuh 18.5°, Isya 90 min)")
 }
 
 data class AppSettings(
     val cityName: String = "Jakarta, Indonesia",
     val latitude: Double = -6.2088,
     val longitude: Double = 106.8456,
+    val elevationMeters: Double = 0.0,
     val calculationMethod: CalculationMethod = CalculationMethod.KEMENAG,
     val imsakOffsetMinutes: Int = 0,
     val subuhOffsetMinutes: Int = 0,
