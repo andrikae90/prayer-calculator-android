@@ -35,6 +35,7 @@ class DefaultSettingsRepository(context: Context) : SettingsRepository {
         val cityName = stringPreferencesKey("city_name")
         val latitude = doublePreferencesKey("latitude")
         val longitude = doublePreferencesKey("longitude")
+        val elevationMeters = doublePreferencesKey("elevation_meters")
         val calculationMethod = stringPreferencesKey("calculation_method")
         val imsakOffset = intPreferencesKey("imsak_offset")
         val subuhOffset = intPreferencesKey("subuh_offset")
@@ -54,6 +55,7 @@ class DefaultSettingsRepository(context: Context) : SettingsRepository {
             cityName = p[Keys.cityName] ?: AppSettings().cityName,
             latitude = p[Keys.latitude] ?: AppSettings().latitude,
             longitude = p[Keys.longitude] ?: AppSettings().longitude,
+            elevationMeters = p[Keys.elevationMeters] ?: AppSettings().elevationMeters,
             calculationMethod = p[Keys.calculationMethod]
                 ?.let { runCatching { CalculationMethod.valueOf(it) }.getOrNull() }
                 ?: AppSettings().calculationMethod,
@@ -86,6 +88,7 @@ class DefaultSettingsRepository(context: Context) : SettingsRepository {
                 p[Keys.cityName] = updated.cityName
                 p[Keys.latitude] = updated.latitude
                 p[Keys.longitude] = updated.longitude
+                p[Keys.elevationMeters] = updated.elevationMeters
                 p[Keys.calculationMethod] = updated.calculationMethod.name
                 p[Keys.imsakOffset] = updated.imsakOffsetMinutes
                 p[Keys.subuhOffset] = updated.subuhOffsetMinutes
