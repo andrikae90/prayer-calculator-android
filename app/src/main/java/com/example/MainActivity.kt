@@ -1,13 +1,19 @@
 package com.example
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.LocationManager
+import android.provider.Settings
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +30,7 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
   private var isRefreshingLocation by mutableStateOf(false)
+  private var showLocationDisabledDialog by mutableStateOf(false)
 
   private val locationPermissionLauncher = registerForActivityResult(
     ActivityResultContracts.RequestMultiplePermissions()
@@ -57,14 +64,46 @@ class MainActivity : ComponentActivity() {
         MainAppScaffold(
           container = container,
           onRefreshLocation = { requestLocationPermissionIfNeeded() },
+          onNavigateToLocationSettings = { openLocationSettings() },
           isRefreshingLocation = isRefreshingLocation
         )
+
+        if (showLocationDisabledDialog) {
+          AlertDialog(
+            onDismissRequest = { showLocationDisabledDialog = false },
+            title = { Text("Lokasi/GPS belum aktif") },
+            text = { Text("Aktifkan layanan lokasi di pengaturan HP agar Teman Sholat dapat menemukan lokasi Anda secara otomatis.") },
+            confirmButton = {
+              Button(onClick = {
+                showLocationDisabledDialog = false
+                openLocationSettings()
+              }) { Text("Nyalakan GPS") }
+            },
+            dismissButton = {
+              Button(onClick = { showLocationDisabledDialog = false }) { Text("Batal") }
+            }
+          )
+        }
       }
     }
 
     requestNotificationPermissionIfNeeded()
     requestLocationPermissionIfNeeded()
     schedulePrayerNotifications()
+  }
+
+  private fun isLocationEnabled(): Boolean {
+    val manager = getSystemService(LOCATION_SERVICE) as LocationManager
+    return try {
+      manager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+          manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    } catch (_: Exception) {
+      false
+    }
+  }
+
+  private fun openLocationSettings() {
+    startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
   }
 
   private fun requestNotificationPermissionIfNeeded() {
@@ -85,7 +124,11 @@ class MainActivity : ComponentActivity() {
     ) == PackageManager.PERMISSION_GRANTED
 
     if (fineGranted || coarseGranted) {
-      refreshGpsLocation()
+      if (isLocationEnabled()) {
+        refreshGpsLocation()
+      } else {
+        showLocationDisabledDialog = true
+      }
     } else {
       locationPermissionLauncher.launch(
         arrayOf(
@@ -102,18 +145,38 @@ class MainActivity : ComponentActivity() {
     val container = (application as MuslimApp).container
     lifecycleScope.launch {
       try {
-        val gpsLocation = container.locationProvider.getCurrentLocation() ?: return@launch
+        if (!isLocationEnabled()) {
+          showLocationDisabledDialog = true
+          return@launch
+        }
+        val gpsLocation = container.locationProvider.getCurrentLocation()
+        if (gpsLocation == null) {
+          showLocationDisabledDialog = true
+          return@launch
+        }
         container.locationProvider.setManualLocation(gpsLocation)
         container.settingsRepository.updateSettings { settings ->
           settings.copy(
-            cityName = "GPS Aktif, ${gpsLocation.cityName}",
+            cityName = gpsLocation.cityName,
             latitude = gpsLocation.latitude,
-            longitude = gpsLocation.longitude
+            longitude = gpsLocation.longitude,
+            elevationMeters = gpsLocation.elevationMeters
           )
         }
         schedulePrayerNotifications()
       } finally {
         isRefreshingLocation = false
+      }
+    }
+  }
+
+  override fun onResume() {
+    super.onResume()
+    if (::locationPermissionLauncher.isInitialized) {
+      val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+      val coarseGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+      if (fineGranted || coarseGranted) {
+        if (isLocationEnabled()) refreshGpsLocation()
       }
     }
   }
