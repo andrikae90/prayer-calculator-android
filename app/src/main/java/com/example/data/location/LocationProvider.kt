@@ -4,13 +4,16 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
-import android.location.LocationManager
 import androidx.core.content.ContextCompat
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.time.ZoneId
+import kotlin.coroutines.resume
 
-/**
- * Encapsulates geographic coordinate, timezone, and city metadata.
- */
+/** Encapsulates geographic coordinate, timezone, and city metadata. */
 data class UserLocation(
     val cityName: String,
     val provinceOrCountry: String,
@@ -30,37 +33,20 @@ data class UserLocation(
 }
 
 interface LocationProvider {
-    /**
-     * Attempts to read the last known location from GPS/Network without requesting runtime permission.
-     * If permission is missing or location services are disabled, returns null.
-     */
     suspend fun getCurrentLocation(): UserLocation?
-
-    /**
-     * Returns the currently selected manual location.
-     */
     fun getManuallySelectedLocation(): UserLocation
-
-    /**
-     * Sets the manually selected location.
-     */
     fun setManualLocation(location: UserLocation)
-
-    /**
-     * Returns the active location: GPS if available and permitted, otherwise manually selected location.
-     * Guarantees non-null without prompting the user.
-     */
     fun getActiveLocation(): UserLocation
-
-    /**
-     * List of Indonesian cities with their exact geographical coordinates and timezone (WIB, WITA, WIT).
-     */
     fun getPredefinedCities(): List<UserLocation>
 }
 
 class DefaultLocationProvider(
     private val context: Context
 ) : LocationProvider {
+
+    private val fusedLocationClient: FusedLocationProviderClient by lazy {
+        LocationServices.getFusedLocationProviderClient(context)
+    }
 
     private val predefinedCities = listOf(
         UserLocation("Jakarta", "DKI Jakarta", -6.2088, 106.8456, ZoneId.of("Asia/Jakarta"), 7.0),
@@ -80,67 +66,62 @@ class DefaultLocationProvider(
         UserLocation("Sorong", "Papua Barat Daya", -0.8762, 131.2558, ZoneId.of("Asia/Jayapura"), 9.0)
     )
 
-    private var manualLocation: UserLocation = predefinedCities.first() // Default Jakarta (WIB)
+    private var manualLocation: UserLocation = predefinedCities.first()
 
     override fun getPredefinedCities(): List<UserLocation> = predefinedCities
-
     override fun getManuallySelectedLocation(): UserLocation = manualLocation
-
-    override fun setManualLocation(location: UserLocation) {
-        manualLocation = location
-    }
+    override fun setManualLocation(location: UserLocation) { manualLocation = location }
 
     @SuppressLint("MissingPermission")
     override suspend fun getCurrentLocation(): UserLocation? {
         val hasFine = ContextCompat.checkSelfPermission(
-            context,
-            android.Manifest.permission.ACCESS_FINE_LOCATION
+            context, android.Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
         val hasCoarse = ContextCompat.checkSelfPermission(
-            context,
-            android.Manifest.permission.ACCESS_COARSE_LOCATION
+            context, android.Manifest.permission.ACCESS_COARSE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
 
-        if (!hasFine && !hasCoarse) {
-            // NEVER request permission automatically on startup; return null gracefully
-            return null
-        }
+        if (!hasFine && !hasCoarse) return null
 
-        return try {
-            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-            val loc: Location? = locationManager?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                ?: locationManager?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+        return suspendCancellableCoroutine { continuation ->
+            val cancellation = CancellationTokenSource()
 
-            if (loc != null) {
-                val tzInfo = inferIndonesianTimezone(loc.longitude)
-                UserLocation(
-                    cityName = "Lokasi Saya (${String.format(java.util.Locale.US, "%.2f, %.2f", loc.latitude, loc.longitude)})",
-                    provinceOrCountry = tzInfo.third,
-                    latitude = loc.latitude,
-                    longitude = loc.longitude,
-                    zoneId = tzInfo.first,
-                    timezoneOffsetHours = tzInfo.second,
-                    isFromGps = true
-                )
-            } else {
-                null
+            val task = fusedLocationClient.getCurrentLocation(
+                if (hasFine) Priority.PRIORITY_HIGH_ACCURACY else Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                cancellation.token
+            )
+
+            task.addOnSuccessListener { location: Location? ->
+                if (continuation.isActive) {
+                    continuation.resume(location?.toUserLocation())
+                }
             }
-        } catch (_: Exception) {
-            null
+            task.addOnFailureListener {
+                if (continuation.isActive) continuation.resume(null)
+            }
+            task.addOnCanceledListener {
+                if (continuation.isActive) continuation.resume(null)
+            }
+
+            continuation.invokeOnCancellation { cancellation.cancel() }
         }
     }
 
-    override fun getActiveLocation(): UserLocation {
-        // Synchronous fallback guarantees no GPS blocking or crashes on startup
-        return manualLocation
+    override fun getActiveLocation(): UserLocation = manualLocation
+
+    private fun Location.toUserLocation(): UserLocation {
+        val tzInfo = inferIndonesianTimezone(longitude)
+        return UserLocation(
+            cityName = "Lokasi Saya (${String.format(java.util.Locale.US, "%.5f, %.5f", latitude, longitude)})",
+            provinceOrCountry = tzInfo.third,
+            latitude = latitude,
+            longitude = longitude,
+            zoneId = tzInfo.first,
+            timezoneOffsetHours = tzInfo.second,
+            isFromGps = true
+        )
     }
 
-    /**
-     * Determines Indonesian timezone (WIB, WITA, WIT) based on longitude boundaries:
-     * - WIB: < 110°E (nominal standard covering Western Indonesia up to ~114°E)
-     * - WITA: 110°E - 125°E (Central Indonesia: Bali, NTB, NTT, Kalimantan Timur/Selatan, Sulawesi)
-     * - WIT: > 125°E (Eastern Indonesia: Maluku, Papua)
-     */
     private fun inferIndonesianTimezone(longitude: Double): Triple<ZoneId, Double, String> {
         return when {
             longitude >= 125.0 -> Triple(ZoneId.of("Asia/Jayapura"), 9.0, "WIT")
