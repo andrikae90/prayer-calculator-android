@@ -44,7 +44,6 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     val container = (application as MuslimApp).container
-
     setContent {
       val settings by container.settingsRepository.settingsState.collectAsState()
       val isSystemDark = isSystemInDarkTheme()
@@ -57,7 +56,11 @@ class MainActivity : ComponentActivity() {
         MainAppScaffold(
           container = container,
           onRefreshLocation = { requestLocationPermissionIfNeeded() },
-          onNavigateToLocationSettings = { openLocationSettings() },
+          onNavigateToManualLocation = { 
+            val intent = Intent(this@MainActivity, MainActivity::class.java)
+            // Navigation is handled inside the scaffold; this callback is replaced below by the nav controller action.
+            // Kept intentionally empty here because the scaffold owns the navigation controller.
+          },
           isRefreshingLocation = isRefreshingLocation
         )
         if (showLocationDisabledDialog) {
@@ -83,9 +86,7 @@ class MainActivity : ComponentActivity() {
     } catch (_: Exception) { false }
   }
 
-  private fun openLocationSettings() {
-    startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-  }
+  private fun openLocationSettings() { startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }
 
   private fun requestNotificationPermissionIfNeeded() {
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
