@@ -28,21 +28,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-
   private var isRefreshingLocation by mutableStateOf(false)
   private var showLocationDisabledDialog by mutableStateOf(false)
 
-  private val locationPermissionLauncher = registerForActivityResult(
-    ActivityResultContracts.RequestMultiplePermissions()
-  ) { permissions ->
-    val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-        permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+  private val locationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+    val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true || permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
     if (granted) refreshGpsLocation()
   }
 
-  private val notificationPermissionLauncher = registerForActivityResult(
-    ActivityResultContracts.RequestPermission()
-  ) { granted ->
+  private val notificationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
     if (granted) schedulePrayerNotifications()
   }
 
@@ -59,7 +53,6 @@ class MainActivity : ComponentActivity() {
         AppThemeSetting.DARK -> true
         AppThemeSetting.LIGHT -> false
       }
-
       MyApplicationTheme(darkTheme = isDarkTheme) {
         MainAppScaffold(
           container = container,
@@ -67,26 +60,17 @@ class MainActivity : ComponentActivity() {
           onNavigateToLocationSettings = { openLocationSettings() },
           isRefreshingLocation = isRefreshingLocation
         )
-
         if (showLocationDisabledDialog) {
           AlertDialog(
             onDismissRequest = { showLocationDisabledDialog = false },
             title = { Text("Lokasi/GPS belum aktif") },
             text = { Text("Aktifkan layanan lokasi di pengaturan HP agar Teman Sholat dapat menemukan lokasi Anda secara otomatis.") },
-            confirmButton = {
-              Button(onClick = {
-                showLocationDisabledDialog = false
-                openLocationSettings()
-              }) { Text("Nyalakan GPS") }
-            },
-            dismissButton = {
-              Button(onClick = { showLocationDisabledDialog = false }) { Text("Batal") }
-            }
+            confirmButton = { Button(onClick = { showLocationDisabledDialog = false; openLocationSettings() }) { Text("Nyalakan GPS") } },
+            dismissButton = { Button(onClick = { showLocationDisabledDialog = false }) { Text("Batal") } }
           )
         }
       }
     }
-
     requestNotificationPermissionIfNeeded()
     requestLocationPermissionIfNeeded()
     schedulePrayerNotifications()
@@ -95,11 +79,8 @@ class MainActivity : ComponentActivity() {
   private fun isLocationEnabled(): Boolean {
     val manager = getSystemService(LOCATION_SERVICE) as LocationManager
     return try {
-      manager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-          manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-    } catch (_: Exception) {
-      false
-    }
+      manager.isProviderEnabled(LocationManager.GPS_PROVIDER) || manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    } catch (_: Exception) { false }
   }
 
   private fun openLocationSettings() {
@@ -108,34 +89,18 @@ class MainActivity : ComponentActivity() {
 
   private fun requestNotificationPermissionIfNeeded() {
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-      val granted = ContextCompat.checkSelfPermission(
-        this, Manifest.permission.POST_NOTIFICATIONS
-      ) == PackageManager.PERMISSION_GRANTED
+      val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
       if (!granted) notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
   }
 
   private fun requestLocationPermissionIfNeeded() {
-    val fineGranted = ContextCompat.checkSelfPermission(
-      this, Manifest.permission.ACCESS_FINE_LOCATION
-    ) == PackageManager.PERMISSION_GRANTED
-    val coarseGranted = ContextCompat.checkSelfPermission(
-      this, Manifest.permission.ACCESS_COARSE_LOCATION
-    ) == PackageManager.PERMISSION_GRANTED
-
+    val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    val coarseGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
     if (fineGranted || coarseGranted) {
-      if (isLocationEnabled()) {
-        refreshGpsLocation()
-      } else {
-        showLocationDisabledDialog = true
-      }
+      if (isLocationEnabled()) refreshGpsLocation() else showLocationDisabledDialog = true
     } else {
-      locationPermissionLauncher.launch(
-        arrayOf(
-          Manifest.permission.ACCESS_FINE_LOCATION,
-          Manifest.permission.ACCESS_COARSE_LOCATION
-        )
-      )
+      locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
     }
   }
 
@@ -145,52 +110,32 @@ class MainActivity : ComponentActivity() {
     val container = (application as MuslimApp).container
     lifecycleScope.launch {
       try {
-        if (!isLocationEnabled()) {
-          showLocationDisabledDialog = true
-          return@launch
-        }
+        if (!isLocationEnabled()) { showLocationDisabledDialog = true; return@launch }
         val gpsLocation = container.locationProvider.getCurrentLocation()
-        if (gpsLocation == null) {
-          showLocationDisabledDialog = true
-          return@launch
-        }
+        if (gpsLocation == null) { showLocationDisabledDialog = true; return@launch }
         container.locationProvider.setManualLocation(gpsLocation)
         container.settingsRepository.updateSettings { settings ->
-          settings.copy(
-            cityName = gpsLocation.cityName,
-            latitude = gpsLocation.latitude,
-            longitude = gpsLocation.longitude,
-            elevationMeters = gpsLocation.elevationMeters
-          )
+          settings.copy(cityName = gpsLocation.cityName, latitude = gpsLocation.latitude, longitude = gpsLocation.longitude, elevationMeters = gpsLocation.elevationMeters)
         }
         schedulePrayerNotifications()
-      } finally {
-        isRefreshingLocation = false
-      }
+      } finally { isRefreshingLocation = false }
     }
   }
 
   override fun onResume() {
     super.onResume()
-    if (::locationPermissionLauncher.isInitialized) {
-      val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-      val coarseGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-      if (fineGranted || coarseGranted) {
-        if (isLocationEnabled()) refreshGpsLocation()
-      }
-    }
+    val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    val coarseGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    if ((fineGranted || coarseGranted) && isLocationEnabled()) refreshGpsLocation()
   }
 
   private fun schedulePrayerNotifications() {
     val container = (application as MuslimApp).container
     if (!container.notificationManager.isNotificationPermissionGranted()) return
     if (!container.settingsRepository.settingsState.value.prayerNotificationEnabled) return
-
     lifecycleScope.launch {
       val schedule = container.prayerRepository.getTodaySchedule().first()
-      schedule.prayers
-        .filter { it.type in setOf(PrayerType.SUBUH, PrayerType.DZUHUR, PrayerType.ASHAR, PrayerType.MAGHRIB, PrayerType.ISYA) }
-        .forEach { container.notificationManager.schedulePrayerReminder(it) }
+      schedule.prayers.filter { it.type in setOf(PrayerType.SUBUH, PrayerType.DZUHUR, PrayerType.ASHAR, PrayerType.MAGHRIB, PrayerType.ISYA) }.forEach { container.notificationManager.schedulePrayerReminder(it) }
     }
   }
 }
