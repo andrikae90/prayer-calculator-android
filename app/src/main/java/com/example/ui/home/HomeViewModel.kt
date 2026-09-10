@@ -37,7 +37,8 @@ class HomeViewModel(
                 latitude = settings.latitude,
                 longitude = settings.longitude,
                 method = settings.calculationMethod,
-                offsets = offsets
+                offsets = offsets,
+                elevationMeters = settings.elevationMeters
             )
         }
         .combine(settingsRepository.settingsState) { schedule, _ ->
