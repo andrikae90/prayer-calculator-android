@@ -10,6 +10,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.domain.model.AppThemeSetting
@@ -18,6 +20,8 @@ import com.example.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+  private var isRefreshingLocation by mutableStateOf(false)
 
   private val locationPermissionLauncher = registerForActivityResult(
     ActivityResultContracts.RequestMultiplePermissions()
@@ -44,7 +48,8 @@ class MainActivity : ComponentActivity() {
       MyApplicationTheme(darkTheme = isDarkTheme) {
         MainAppScaffold(
           container = container,
-          onRefreshLocation = { requestLocationPermissionIfNeeded() }
+          onRefreshLocation = { requestLocationPermissionIfNeeded() },
+          isRefreshingLocation = isRefreshingLocation
         )
       }
     }
@@ -73,18 +78,22 @@ class MainActivity : ComponentActivity() {
   }
 
   private fun refreshGpsLocation() {
+    if (isRefreshingLocation) return
+    isRefreshingLocation = true
     val container = (application as MuslimApp).container
     lifecycleScope.launch {
-      val gpsLocation = container.locationProvider.getCurrentLocation() ?: return@launch
-      container.locationProvider.setManualLocation(gpsLocation)
-      container.settingsRepository.updateSettings { settings ->
-        settings.copy(
-          // The home location chip uses the text before the first comma.
-          // Prefix it so the user can immediately see that GPS is active.
-          cityName = "GPS Aktif, ${gpsLocation.cityName}",
-          latitude = gpsLocation.latitude,
-          longitude = gpsLocation.longitude
-        )
+      try {
+        val gpsLocation = container.locationProvider.getCurrentLocation() ?: return@launch
+        container.locationProvider.setManualLocation(gpsLocation)
+        container.settingsRepository.updateSettings { settings ->
+          settings.copy(
+            cityName = "GPS Aktif, ${gpsLocation.cityName}",
+            latitude = gpsLocation.latitude,
+            longitude = gpsLocation.longitude
+          )
+        }
+      } finally {
+        isRefreshingLocation = false
       }
     }
   }
