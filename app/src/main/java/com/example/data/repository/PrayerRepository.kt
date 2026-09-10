@@ -30,7 +30,8 @@ interface PrayerRepository {
         offsets: Map<PrayerType, Int> = emptyMap(),
         zoneId: ZoneId? = null,
         timezoneOffsetHours: Double? = null,
-        asrJuristicMethod: AsrJuristicMethod = AsrJuristicMethod.STANDARD
+        asrJuristicMethod: AsrJuristicMethod = AsrJuristicMethod.STANDARD,
+        elevationMeters: Double = 0.0
     ): Flow<TodaySchedule>
 
     fun calculateResultForDate(
@@ -41,7 +42,8 @@ interface PrayerRepository {
         timezoneId: String = "Asia/Jakarta",
         method: CalculationMethod = CalculationMethod.KEMENAG,
         asrJuristicMethod: AsrJuristicMethod = AsrJuristicMethod.STANDARD,
-        offsets: Map<PrayerType, Int> = emptyMap()
+        offsets: Map<PrayerType, Int> = emptyMap(),
+        elevationMeters: Double = 0.0
     ): PrayerCalculationResult
 }
 
@@ -59,7 +61,8 @@ class DefaultPrayerRepository(
         timezoneId: String,
         method: CalculationMethod,
         asrJuristicMethod: AsrJuristicMethod,
-        offsets: Map<PrayerType, Int>
+        offsets: Map<PrayerType, Int>,
+        elevationMeters: Double
     ): PrayerCalculationResult {
         val mappedMethod = when (method) {
             CalculationMethod.KEMENAG -> PrayerCalculationMethod.KEMENAG_INDONESIA
@@ -76,7 +79,8 @@ class DefaultPrayerRepository(
             timezoneId = timezoneId,
             method = mappedMethod,
             asrJuristicMethod = asrJuristicMethod,
-            customOffsets = offsets
+            customOffsets = offsets,
+            elevationMeters = elevationMeters
         )
     }
 
@@ -88,7 +92,8 @@ class DefaultPrayerRepository(
         offsets: Map<PrayerType, Int>,
         zoneId: ZoneId?,
         timezoneOffsetHours: Double?,
-        asrJuristicMethod: AsrJuristicMethod
+        asrJuristicMethod: AsrJuristicMethod,
+        elevationMeters: Double
     ): Flow<TodaySchedule> = flow {
         val resolvedOffset = timezoneOffsetHours ?: resolveIndonesianTimezoneOffset(longitude)
         val resolvedZoneId = zoneId ?: resolveIndonesianZoneId(longitude)
@@ -106,7 +111,8 @@ class DefaultPrayerRepository(
                 timezoneId = resolvedZoneId.id,
                 method = method,
                 asrJuristicMethod = asrJuristicMethod,
-                offsets = offsets
+                offsets = offsets,
+                elevationMeters = elevationMeters
             )
 
             val scheduleData = listOf(
@@ -119,8 +125,6 @@ class DefaultPrayerRepository(
                 PrayerScheduleItem(PrayerType.ISYA, todayResult.isha, todayResult.rawTimes[PrayerType.ISYA]!!.hour, todayResult.rawTimes[PrayerType.ISYA]!!.minute)
             )
 
-            // Find the last obligatory prayer that has started.
-            // The home card uses this as the main prayer while its countdown still points to the next prayer.
             val currentPrayer = scheduleData
                 .filter {
                     it.type == PrayerType.SUBUH ||
@@ -162,7 +166,8 @@ class DefaultPrayerRepository(
                     timezoneId = resolvedZoneId.id,
                     method = method,
                     asrJuristicMethod = asrJuristicMethod,
-                    offsets = offsets
+                    offsets = offsets,
+                    elevationMeters = elevationMeters
                 )
 
                 val tomorrowSubuhHour = tomorrowResult.rawTimes[PrayerType.SUBUH]!!.hour
@@ -191,7 +196,6 @@ class DefaultPrayerRepository(
                 "--:--:--"
             }
 
-            // Display the prayer currently in its time window; before the first prayer, show the next prayer.
             val displayPrayer = currentPrayer ?: nextItem
 
             val cal = Calendar.getInstance()
