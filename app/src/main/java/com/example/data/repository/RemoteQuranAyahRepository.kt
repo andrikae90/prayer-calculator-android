@@ -5,6 +5,7 @@ import com.squareup.moshi.JsonClass
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface QuranAyahRepository {
@@ -35,7 +36,13 @@ class RemoteQuranAyahRepository : QuranAyahRepository {
 
 private interface QuranApi {
     @GET("verses/by_chapter/{chapter_number}")
-    suspend fun getVerses(@retrofit2.http.Path("chapter_number") chapterNumber: Int): QuranVerseResponse
+    suspend fun getVerses(
+        @Path("chapter_number") chapterNumber: Int,
+        @Query("language") language: String = "id",
+        @Query("translations") translations: String = "33",
+        @Query("fields") fields: String = "text_uthmani",
+        @Query("per_page") perPage: Int = 300
+    ): QuranVerseResponse
 }
 
 @JsonClass(generateAdapter = true)
