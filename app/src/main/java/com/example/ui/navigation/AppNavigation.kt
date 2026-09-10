@@ -1,6 +1,5 @@
 package com.example.ui.navigation
 
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -55,6 +54,7 @@ import com.example.ui.splash.SplashScreen
 fun MainAppScaffold(
     container: AppContainer,
     onRefreshLocation: () -> Unit,
+    isRefreshingLocation: Boolean = false,
     navController: NavHostController = rememberNavController()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -103,17 +103,33 @@ fun MainAppScaffold(
                         if (isHomeScreen) {
                             TextButton(
                                 onClick = onRefreshLocation,
+                                enabled = !isRefreshingLocation,
                                 modifier = Modifier.testTag("refresh_location_button")
                             ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Refresh,
-                                    contentDescription = "Perbarui Lokasi",
-                                    modifier = Modifier.padding(end = 8.dp)
-                                )
-                                Text(
-                                    text = "Perbarui Lokasi",
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
-                                )
+                                if (isRefreshingLocation) {
+                                    androidx.compose.material3.CircularProgressIndicator(
+                                        modifier = Modifier
+                                            .padding(end = 8.dp)
+                                            .padding(2.dp)
+                                            .testTag("location_refresh_progress"),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "Memperbarui...",
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Filled.Refresh,
+                                        contentDescription = "Perbarui Lokasi",
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    )
+                                    Text(
+                                        text = "Perbarui Lokasi",
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+                                    )
+                                }
                             }
                         }
                     },
