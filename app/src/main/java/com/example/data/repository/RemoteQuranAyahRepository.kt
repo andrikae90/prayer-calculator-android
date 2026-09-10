@@ -46,12 +46,12 @@ private interface QuranApi {
 }
 
 @JsonClass(generateAdapter = true)
-private data class QuranVerseResponse(
+internal data class QuranVerseResponse(
     val verses: List<QuranVerse> = emptyList()
 )
 
 @JsonClass(generateAdapter = true)
-private data class QuranVerse(
+internal data class QuranVerse(
     @com.squareup.moshi.Json(name = "verse_key") val verseKey: String,
     @com.squareup.moshi.Json(name = "text_uthmani") val textUthmani: String,
     val translations: List<QuranTranslation> = emptyList()
@@ -60,6 +60,6 @@ private data class QuranVerse(
 }
 
 @JsonClass(generateAdapter = true)
-private data class QuranTranslation(
+internal data class QuranTranslation(
     val text: String = ""
 )
