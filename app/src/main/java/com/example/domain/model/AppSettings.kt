@@ -13,6 +13,14 @@ enum class CalculationMethod(val title: String, val description: String) {
     UMM_AL_QURA("Umm Al-Qura, Makkah", "Universitas Umm Al-Qura (Subuh 18.5°, Isya 90 min)")
 }
 
+enum class PrayerNotificationSound(val title: String) {
+    ADZAN_LENGKAP("Adzan lengkap"),
+    TAKBIR_SAJA("Takbir saja"),
+    BIP_PANJANG("Bip panjang"),
+    GETAR_SAJA("Getar saja"),
+    TANPA_NOTIFIKASI("Tanpa notifikasi")
+}
+
 data class AppSettings(
     val cityName: String = "Jakarta, Indonesia",
     val latitude: Double = -6.2088,
@@ -26,6 +34,12 @@ data class AppSettings(
     val maghribOffsetMinutes: Int = 0,
     val isyaOffsetMinutes: Int = 0,
     val prayerNotificationEnabled: Boolean = true,
+    val subuhNotificationEnabled: Boolean = true,
+    val dzuhurNotificationEnabled: Boolean = true,
+    val asharNotificationEnabled: Boolean = true,
+    val maghribNotificationEnabled: Boolean = true,
+    val isyaNotificationEnabled: Boolean = true,
+    val notificationSound: PrayerNotificationSound = PrayerNotificationSound.BIP_PANJANG,
     val adzanSoundEnabled: Boolean = true,
     val selectedAdzanVoice: String = "Adzan Makkah",
     val themeSetting: AppThemeSetting = AppThemeSetting.DARK,
