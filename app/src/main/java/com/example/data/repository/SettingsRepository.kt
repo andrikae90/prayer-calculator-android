@@ -10,6 +10,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.example.domain.model.AppSettings
 import com.example.domain.model.AppThemeSetting
 import com.example.domain.model.CalculationMethod
+import com.example.domain.model.PrayerNotificationSound
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -44,6 +45,12 @@ class DefaultSettingsRepository(context: Context) : SettingsRepository {
         val maghribOffset = intPreferencesKey("maghrib_offset")
         val isyaOffset = intPreferencesKey("isya_offset")
         val notificationEnabled = booleanPreferencesKey("notification_enabled")
+        val subuhNotificationEnabled = booleanPreferencesKey("subuh_notification_enabled")
+        val dzuhurNotificationEnabled = booleanPreferencesKey("dzuhur_notification_enabled")
+        val asharNotificationEnabled = booleanPreferencesKey("ashar_notification_enabled")
+        val maghribNotificationEnabled = booleanPreferencesKey("maghrib_notification_enabled")
+        val isyaNotificationEnabled = booleanPreferencesKey("isya_notification_enabled")
+        val notificationSound = stringPreferencesKey("notification_sound")
         val adzanSoundEnabled = booleanPreferencesKey("adzan_sound_enabled")
         val selectedAdzanVoice = stringPreferencesKey("selected_adzan_voice")
         val themeSetting = stringPreferencesKey("theme_setting")
@@ -66,6 +73,14 @@ class DefaultSettingsRepository(context: Context) : SettingsRepository {
             maghribOffsetMinutes = p[Keys.maghribOffset] ?: 0,
             isyaOffsetMinutes = p[Keys.isyaOffset] ?: 0,
             prayerNotificationEnabled = p[Keys.notificationEnabled] ?: true,
+            subuhNotificationEnabled = p[Keys.subuhNotificationEnabled] ?: true,
+            dzuhurNotificationEnabled = p[Keys.dzuhurNotificationEnabled] ?: true,
+            asharNotificationEnabled = p[Keys.asharNotificationEnabled] ?: true,
+            maghribNotificationEnabled = p[Keys.maghribNotificationEnabled] ?: true,
+            isyaNotificationEnabled = p[Keys.isyaNotificationEnabled] ?: true,
+            notificationSound = p[Keys.notificationSound]
+                ?.let { runCatching { PrayerNotificationSound.valueOf(it) }.getOrNull() }
+                ?: PrayerNotificationSound.BIP_PANJANG,
             adzanSoundEnabled = p[Keys.adzanSoundEnabled] ?: true,
             selectedAdzanVoice = p[Keys.selectedAdzanVoice] ?: "Adzan Makkah",
             themeSetting = p[Keys.themeSetting]
@@ -97,6 +112,12 @@ class DefaultSettingsRepository(context: Context) : SettingsRepository {
                 p[Keys.maghribOffset] = updated.maghribOffsetMinutes
                 p[Keys.isyaOffset] = updated.isyaOffsetMinutes
                 p[Keys.notificationEnabled] = updated.prayerNotificationEnabled
+                p[Keys.subuhNotificationEnabled] = updated.subuhNotificationEnabled
+                p[Keys.dzuhurNotificationEnabled] = updated.dzuhurNotificationEnabled
+                p[Keys.asharNotificationEnabled] = updated.asharNotificationEnabled
+                p[Keys.maghribNotificationEnabled] = updated.maghribNotificationEnabled
+                p[Keys.isyaNotificationEnabled] = updated.isyaNotificationEnabled
+                p[Keys.notificationSound] = updated.notificationSound.name
                 p[Keys.adzanSoundEnabled] = updated.adzanSoundEnabled
                 p[Keys.selectedAdzanVoice] = updated.selectedAdzanVoice
                 p[Keys.themeSetting] = updated.themeSetting.name
