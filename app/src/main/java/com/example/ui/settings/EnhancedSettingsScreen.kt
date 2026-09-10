@@ -35,10 +35,7 @@ fun EnhancedSettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Mo
         )
     }
     if (showManualLocation) {
-        ManualLocationDialog(
-            viewModel = viewModel,
-            onDismiss = { showManualLocation = false }
-        )
+        ManualLocationDialog(viewModel = viewModel, onDismiss = { showManualLocation = false })
     }
 }
 
@@ -47,6 +44,8 @@ private fun ManualLocationDialog(viewModel: SettingsViewModel, onDismiss: () -> 
     var query by remember { mutableStateOf("") }
     val results by viewModel.locationResults.collectAsState()
     val searching by viewModel.isSearchingLocation.collectAsState()
+    val updatingGps by viewModel.isUpdatingGps.collectAsState()
+    val error by viewModel.locationError.collectAsState()
     val settings by viewModel.settings.collectAsState()
     val context = LocalContext.current
 
@@ -55,7 +54,10 @@ private fun ManualLocationDialog(viewModel: SettingsViewModel, onDismiss: () -> 
         title = { Text("Pilih Lokasi Manual", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Cari nama desa/kelurahan atau kecamatan. Koordinat lokasi akan dipakai untuk menghitung waktu salat.", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "Cari nama desa/kelurahan atau kecamatan. Pilih hasil yang sesuai; koordinatnya akan dipakai untuk menghitung waktu salat.",
+                    style = MaterialTheme.typography.bodySmall
+                )
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it; viewModel.searchLocations(it) },
@@ -63,12 +65,20 @@ private fun ManualLocationDialog(viewModel: SettingsViewModel, onDismiss: () -> 
                     singleLine = true,
                     label = { Text("Cari desa / kecamatan") },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                    trailingIcon = { if (searching) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) }
+                    trailingIcon = {
+                        if (searching) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    }
                 )
-                if (results.isEmpty() && query.length >= 3 && !searching) {
+                if (error != null) {
+                    Text(error.orEmpty(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+                if (results.isEmpty() && query.length >= 3 && !searching && error == null) {
                     Text("Lokasi tidak ditemukan. Coba nama desa atau kecamatan yang lebih spesifik.", style = MaterialTheme.typography.bodySmall)
                 }
-                LazyColumn(modifier = Modifier.heightIn(max = 280.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 280.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     items(results) { location ->
                         LocationResultRow(location) {
                             viewModel.selectLocation(location)
@@ -79,17 +89,31 @@ private fun ManualLocationDialog(viewModel: SettingsViewModel, onDismiss: () -> 
                 HorizontalDivider()
                 TextButton(
                     onClick = { refreshGpsLocation(context, viewModel) },
+                    enabled = !updatingGps,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Filled.MyLocation, contentDescription = null)
+                    if (updatingGps) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Filled.MyLocation, contentDescription = null)
+                    }
                     Spacer(Modifier.width(8.dp))
-                    Text("Perbarui Lokasi GPS")
+                    Text(if (updatingGps) "Mengambil lokasi GPS..." else "Gunakan Lokasi GPS")
                 }
-                Text("Jika GPS mati, tombol ini akan membuka Pengaturan Lokasi HP.", style = MaterialTheme.typography.labelSmall)
-                Text("Lokasi aktif: ${settings.cityName}", style = MaterialTheme.typography.labelSmall)
+                Text(
+                    "Jika GPS mati, tombol akan membuka Pengaturan Lokasi HP.",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Text(
+                    "Lokasi aktif: ${settings.cityName}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         },
-        confirmButton = { TextButton(onClick = { viewModel.clearLocationResults(); onDismiss() }) { Text("Tutup") } }
+        confirmButton = {
+            TextButton(onClick = { viewModel.clearLocationResults(); onDismiss() }) { Text("Tutup") }
+        }
     )
 }
 
@@ -97,12 +121,10 @@ private fun refreshGpsLocation(context: Context, viewModel: SettingsViewModel) {
     val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
     val gpsEnabled = locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true
     val networkEnabled = locationManager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true
-
     if (!gpsEnabled && !networkEnabled) {
         context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
         return
     }
-
     viewModel.useGpsLocation()
 }
 
@@ -115,7 +137,7 @@ private fun LocationResultRow(location: UserLocation, onClick: () -> Unit) {
         Column(modifier = Modifier.padding(10.dp)) {
             Text(location.cityName, fontWeight = FontWeight.SemiBold)
             Text(
-                "${location.latitude.formatCoord()}, ${location.longitude.formatCoord()}",
+                "${location.provinceOrCountry} • ${location.latitude.formatCoord()}, ${location.longitude.formatCoord()}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
