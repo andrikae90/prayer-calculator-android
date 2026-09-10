@@ -72,6 +72,11 @@ class MainActivity : ComponentActivity() {
     requestNotificationPermissionIfNeeded()
     requestLocationPermissionIfNeeded()
     schedulePrayerNotifications()
+    lifecycleScope.launch {
+      container.settingsRepository.settingsState.collect {
+        schedulePrayerNotifications()
+      }
+    }
   }
 
   private fun isLocationEnabled(): Boolean {
@@ -128,10 +133,29 @@ class MainActivity : ComponentActivity() {
   private fun schedulePrayerNotifications() {
     val container = (application as MuslimApp).container
     if (!container.notificationManager.isNotificationPermissionGranted()) return
-    if (!container.settingsRepository.settingsState.value.prayerNotificationEnabled) return
+    val settings = container.settingsRepository.settingsState.value
+    if (!settings.prayerNotificationEnabled) {
+      container.notificationManager.cancelAllReminders()
+      return
+    }
     lifecycleScope.launch {
+      val currentSettings = container.settingsRepository.settingsState.value
+      container.notificationManager.cancelAllReminders()
       val schedule = container.prayerRepository.getTodaySchedule().first()
-      schedule.prayers.filter { it.type in setOf(PrayerType.SUBUH, PrayerType.DZUHUR, PrayerType.ASHAR, PrayerType.MAGHRIB, PrayerType.ISYA) }.forEach { container.notificationManager.schedulePrayerReminder(it) }
+      schedule.prayers
+        .filter { prayer ->
+          when (prayer.type) {
+            PrayerType.SUBUH -> currentSettings.subuhNotificationEnabled
+            PrayerType.DZUHUR -> currentSettings.dzuhurNotificationEnabled
+            PrayerType.ASHAR -> currentSettings.asharNotificationEnabled
+            PrayerType.MAGHRIB -> currentSettings.maghribNotificationEnabled
+            PrayerType.ISYA -> currentSettings.isyaNotificationEnabled
+            else -> false
+          }
+        }
+        .forEach { prayer ->
+          container.notificationManager.schedulePrayerReminder(prayer, currentSettings.notificationSound)
+        }
     }
   }
 }
