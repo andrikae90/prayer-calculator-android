@@ -119,20 +119,17 @@ class DefaultPrayerRepository(
                 PrayerScheduleItem(PrayerType.ISYA, todayResult.isha, todayResult.rawTimes[PrayerType.ISYA]!!.hour, todayResult.rawTimes[PrayerType.ISYA]!!.minute)
             )
 
-            // Current prayer = the latest obligatory prayer that has started today.
-            // Next prayer = the first prayer that has not started yet.
-            // This keeps Asar displayed as the current prayer at 15:03, while Maghrib remains next.
-            val obligatoryPrayers = scheduleData.filter {
-                it.type == PrayerType.SUBUH ||
-                    it.type == PrayerType.DZUHUR ||
-                    it.type == PrayerType.ASHAR ||
-                    it.type == PrayerType.MAGHRIB ||
-                    it.type == PrayerType.ISYA
-            }
-
-            val currentPrayer = obligatoryPrayers.lastOrNull {
-                currentTimeInSeconds >= it.hour * 3600 + it.minute * 60
-            }
+            // Find the last obligatory prayer that has started.
+            // The home card uses this as the main prayer while its countdown still points to the next prayer.
+            val currentPrayer = scheduleData
+                .filter {
+                    it.type == PrayerType.SUBUH ||
+                        it.type == PrayerType.DZUHUR ||
+                        it.type == PrayerType.ASHAR ||
+                        it.type == PrayerType.MAGHRIB ||
+                        it.type == PrayerType.ISYA
+                }
+                .lastOrNull { currentTimeInSeconds >= it.hour * 3600 + it.minute * 60 }
 
             var nextFound = false
             var nextItem: PrayerScheduleItem? = null
@@ -194,6 +191,9 @@ class DefaultPrayerRepository(
                 "--:--:--"
             }
 
+            // Display the prayer currently in its time window; before the first prayer, show the next prayer.
+            val displayPrayer = currentPrayer ?: nextItem
+
             val cal = Calendar.getInstance()
             cal.set(currentDate.year, currentDate.monthValue - 1, currentDate.dayOfMonth)
             val dateFormatMasehi = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
@@ -207,9 +207,8 @@ class DefaultPrayerRepository(
                     dateMasehiFormatted = dateMasehi,
                     dateHijriFormatted = dateHijri,
                     prayers = mappedPrayers,
-                    nextPrayer = nextItem,
+                    nextPrayer = displayPrayer,
                     countdownText = countdownFormatted,
-                    currentPrayer = currentPrayer,
                     dailyReminder = reminder
                 )
             )
