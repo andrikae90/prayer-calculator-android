@@ -9,7 +9,6 @@ import android.media.MediaPlayer
 import android.media.ToneGenerator
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import com.example.prayercalculator.data.AppSettings
 import com.example.prayercalculator.data.PrayerNotificationSound
 
 class PrayerAlarmReceiver : BroadcastReceiver() {
