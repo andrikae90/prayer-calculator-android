@@ -21,6 +21,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -36,8 +38,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -123,6 +127,11 @@ private fun QuranReaderDialog(
     onRetry: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val audioController = remember { QuranAudioController() }
+    DisposableEffect(Unit) {
+        onDispose { audioController.release() }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -141,7 +150,16 @@ private fun QuranReaderDialog(
                 }
                 ayahs.isEmpty() -> Text("Belum ada ayat yang dapat ditampilkan.")
                 else -> LazyColumn(modifier = Modifier.fillMaxWidth().height(430.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(ayahs, key = { it.number }) { ayah -> AyahCard(ayah) }
+                    items(ayahs, key = { it.number }) { ayah ->
+                        AyahCard(
+                            surahNumber = surah.number,
+                            ayah = ayah,
+                            isCurrent = audioController.currentKey == "${surah.number}:${ayah.number}",
+                            isPlaying = audioController.isPlaying,
+                            isLoadingAudio = audioController.isLoading,
+                            onAudioClick = { audioController.toggle(surah.number, ayah.number) }
+                        )
+                    }
                 }
             }
         },
@@ -150,11 +168,31 @@ private fun QuranReaderDialog(
 }
 
 @Composable
-private fun AyahCard(ayah: QuranAyah) {
+private fun AyahCard(
+    surahNumber: Int,
+    ayah: QuranAyah,
+    isCurrent: Boolean,
+    isPlaying: Boolean,
+    isLoadingAudio: Boolean,
+    onAudioClick: () -> Unit
+) {
     Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
-                Text(ayah.number.toString(), modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                    Text(ayah.number.toString(), modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+                IconButton(
+                    onClick = onAudioClick,
+                    enabled = !isLoadingAudio || isCurrent,
+                    modifier = Modifier.testTag("ayah_audio_${surahNumber}_${ayah.number}")
+                ) {
+                    when {
+                        isCurrent && isLoadingAudio -> CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                        isCurrent && isPlaying -> Icon(Icons.Filled.Pause, contentDescription = "Jeda audio ayat ${ayah.number}")
+                        else -> Icon(Icons.Filled.PlayArrow, contentDescription = "Putar audio ayat ${ayah.number}")
+                    }
+                }
             }
             Text(ayah.textArabic, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Normal, lineHeight = 36.sp))
             if (ayah.translation.isNotBlank()) {
