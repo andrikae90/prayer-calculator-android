@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -107,7 +108,7 @@ fun MainAppScaffold(
                                 Icon(
                                     imageVector = Icons.Filled.Refresh,
                                     contentDescription = "Perbarui Lokasi",
-                                    modifier = Modifier.padding(end = androidx.compose.ui.unit.dp)
+                                    modifier = Modifier.padding(end = 8.dp)
                                 )
                                 Text(
                                     text = "Perbarui Lokasi",
