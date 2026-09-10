@@ -1,0 +1,6 @@
+{
+  "name": "Muslim Mas An",
+  "description": "Aplikasi Muslim all-in-one dengan jadwal salat, kompas kiblat, Al-Qur'an, kumpulan doa, dzikir & tasbih digital, dan kalender Hijriah.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
