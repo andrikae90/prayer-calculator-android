@@ -23,33 +23,40 @@ class SettingsViewModel(
     val locationResults: StateFlow<List<UserLocation>> = _locationResults
     private val _isSearchingLocation = MutableStateFlow(false)
     val isSearchingLocation: StateFlow<Boolean> = _isSearchingLocation
+    private val _locationError = MutableStateFlow<String?>(null)
+    val locationError: StateFlow<String?> = _locationError
+    private val _isUpdatingGps = MutableStateFlow(false)
+    val isUpdatingGps: StateFlow<Boolean> = _isUpdatingGps
 
     fun updateCity(city: String) { settingsRepository.updateSettings { it.copy(cityName = city) } }
 
     fun selectLocation(location: UserLocation) {
         locationProvider.setManualLocation(location)
         settingsRepository.updateSettings {
-            it.copy(
-                cityName = location.cityName,
-                latitude = location.latitude,
-                longitude = location.longitude,
-                elevationMeters = location.elevationMeters
-            )
+            it.copy(cityName = location.cityName, latitude = location.latitude, longitude = location.longitude, elevationMeters = location.elevationMeters)
         }
         _locationResults.value = emptyList()
+        _locationError.value = null
     }
 
     fun useGpsLocation() {
         viewModelScope.launch {
-            val location = locationProvider.getCurrentLocation() ?: return@launch
-            locationProvider.setManualLocation(location)
-            settingsRepository.updateSettings {
-                it.copy(
-                    cityName = location.cityName,
-                    latitude = location.latitude,
-                    longitude = location.longitude,
-                    elevationMeters = location.elevationMeters
-                )
+            _isUpdatingGps.value = true
+            _locationError.value = null
+            try {
+                val location = locationProvider.getCurrentLocation()
+                if (location == null) {
+                    _locationError.value = "Lokasi GPS belum tersedia. Aktifkan lokasi dan pastikan izin lokasi diberikan."
+                    return@launch
+                }
+                locationProvider.setManualLocation(location)
+                settingsRepository.updateSettings {
+                    it.copy(cityName = location.cityName, latitude = location.latitude, longitude = location.longitude, elevationMeters = location.elevationMeters)
+                }
+            } catch (_: Exception) {
+                _locationError.value = "Gagal mengambil lokasi GPS. Silakan coba lagi."
+            } finally {
+                _isUpdatingGps.value = false
             }
         }
     }
@@ -58,11 +65,18 @@ class SettingsViewModel(
         if (query.trim().length < 3) { _locationResults.value = emptyList(); return }
         viewModelScope.launch {
             _isSearchingLocation.value = true
-            _locationResults.value = locationProvider.searchLocations(query)
-            _isSearchingLocation.value = false
+            _locationError.value = null
+            try {
+                _locationResults.value = locationProvider.searchLocations(query)
+            } catch (_: Exception) {
+                _locationResults.value = emptyList()
+                _locationError.value = "Pencarian lokasi gagal. Periksa koneksi internet lalu coba lagi."
+            } finally {
+                _isSearchingLocation.value = false
+            }
         }
     }
-    fun clearLocationResults() { _locationResults.value = emptyList() }
+    fun clearLocationResults() { _locationResults.value = emptyList(); _locationError.value = null }
     fun updateCalculationMethod(method: CalculationMethod) { settingsRepository.updateSettings { it.copy(calculationMethod = method) } }
     fun updateTheme(theme: AppThemeSetting) { settingsRepository.updateSettings { it.copy(themeSetting = theme) } }
     fun togglePrayerNotification(enabled: Boolean) { settingsRepository.updateSettings { it.copy(prayerNotificationEnabled = enabled) } }
