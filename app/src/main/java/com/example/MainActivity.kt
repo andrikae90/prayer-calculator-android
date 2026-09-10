@@ -56,11 +56,6 @@ class MainActivity : ComponentActivity() {
         MainAppScaffold(
           container = container,
           onRefreshLocation = { requestLocationPermissionIfNeeded() },
-          onNavigateToManualLocation = { 
-            val intent = Intent(this@MainActivity, MainActivity::class.java)
-            // Navigation is handled inside the scaffold; this callback is replaced below by the nav controller action.
-            // Kept intentionally empty here because the scaffold owns the navigation controller.
-          },
           isRefreshingLocation = isRefreshingLocation
         )
         if (showLocationDisabledDialog) {
