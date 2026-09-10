@@ -76,7 +76,9 @@ class MainActivity : ComponentActivity() {
       container.locationProvider.setManualLocation(gpsLocation)
       container.settingsRepository.updateSettings { settings ->
         settings.copy(
-          cityName = gpsLocation.cityName,
+          // The home location chip uses the text before the first comma.
+          // Prefix it so the user can immediately see that GPS is active.
+          cityName = "GPS Aktif, ${gpsLocation.cityName}",
           latitude = gpsLocation.latitude,
           longitude = gpsLocation.longitude
         )
