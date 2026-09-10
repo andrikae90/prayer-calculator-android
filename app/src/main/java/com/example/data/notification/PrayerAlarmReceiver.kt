@@ -1,12 +1,14 @@
 package com.example.data.notification
 
-import android.media.AudioManager
-import android.media.ToneGenerator
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.MediaPlayer
+import android.media.ToneGenerator
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.R
@@ -43,12 +45,48 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify("prayer_${prayerName}_${System.currentTimeMillis()}".hashCode(), notification)
 
-        if (sound == PrayerNotificationSound.BIP_PANJANG) {
-            val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
-            tone.startTone(ToneGenerator.TONE_PROP_BEEP, 1200)
-            android.os.Handler(context.mainLooper).postDelayed({ tone.release() }, 1300)
+        when (sound) {
+            PrayerNotificationSound.BIP_PANJANG -> playLongBeep(context)
+            PrayerNotificationSound.ADZAN_LENGKAP -> playBundledAudio(context, "adzan_lengkap")
+            PrayerNotificationSound.TAKBIR_SAJA -> playBundledAudio(context, "takbir_saja")
+            PrayerNotificationSound.GETAR_SAJA,
+            PrayerNotificationSound.TANPA_NOTIFIKASI -> Unit
         }
-        // ADZAN_LENGKAP and TAKBIR_SAJA intentionally remain silent until
-        // licensed audio assets are added to res/raw.
+    }
+
+    private fun playLongBeep(context: Context) {
+        val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
+        tone.startTone(ToneGenerator.TONE_PROP_BEEP, 1200)
+        android.os.Handler(context.mainLooper).postDelayed({ tone.release() }, 1300)
+    }
+
+    /**
+     * Plays a legally distributable audio asset bundled in res/raw.
+     * Expected filenames:
+     *   res/raw/adzan_lengkap.*
+     *   res/raw/takbir_saja.*
+     *
+     * The resource is looked up dynamically so the project can compile even
+     * before the licensed audio files are supplied. If the asset is missing,
+     * the notification still appears but no audio is played.
+     */
+    private fun playBundledAudio(context: Context, resourceName: String) {
+        val resourceId = context.resources.getIdentifier(resourceName, "raw", context.packageName)
+        if (resourceId == 0) return
+
+        val player = runCatching {
+            MediaPlayer.create(context, resourceId)?.apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build()
+                )
+                setOnCompletionListener { it.release() }
+                setOnErrorListener { mp, _, _ -> mp.release(); true }
+            }
+        }.getOrNull() ?: return
+
+        runCatching { player.start() }.onFailure { player.release() }
     }
 }
