@@ -70,7 +70,7 @@ fun MainAppScaffold(
     )
 
     val topBarTitle = when (currentRoute) {
-        Screen.Home.route -> "Muslim Masan"
+        Screen.Home.route -> "TEMAN SHOLAT"
         Screen.Qibla.route -> "Arah Kiblat"
         Screen.Dua.route -> "Kumpulan Doa"
         Screen.Dzikr.route -> "Dzikir & Tasbih"
@@ -92,10 +92,7 @@ fun MainAppScaffold(
                     navigationIcon = {
                         if (!isHomeScreen) {
                             IconButton(onClick = { navController.popBackStack() }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Kembali"
-                                )
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                             }
                         }
                     },
@@ -108,27 +105,14 @@ fun MainAppScaffold(
                             ) {
                                 if (isRefreshingLocation) {
                                     androidx.compose.material3.CircularProgressIndicator(
-                                        modifier = Modifier
-                                            .padding(end = 8.dp)
-                                            .padding(2.dp)
-                                            .testTag("location_refresh_progress"),
+                                        modifier = Modifier.padding(end = 8.dp).padding(2.dp).testTag("location_refresh_progress"),
                                         strokeWidth = 2.dp,
                                         color = MaterialTheme.colorScheme.primary
                                     )
-                                    Text(
-                                        text = "Memperbarui...",
-                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
-                                    )
+                                    Text("Memperbarui...", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold))
                                 } else {
-                                    Icon(
-                                        imageVector = Icons.Filled.Refresh,
-                                        contentDescription = "Perbarui Lokasi",
-                                        modifier = Modifier.padding(end = 8.dp)
-                                    )
-                                    Text(
-                                        text = "Perbarui Lokasi",
-                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
-                                    )
+                                    Icon(Icons.Filled.Refresh, contentDescription = "Perbarui Lokasi", modifier = Modifier.padding(end = 8.dp))
+                                    Text("Perbarui Lokasi", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold))
                                 }
                             }
                         }
@@ -156,20 +140,13 @@ fun MainAppScaffold(
                             onClick = {
                                 if (currentRoute != item.route) {
                                     navController.navigate(item.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                         launchSingleTop = true
                                         restoreState = true
                                     }
                                 }
                             },
-                            icon = {
-                                Icon(
-                                    imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                                    contentDescription = item.title
-                                )
-                            },
+                            icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = item.title) },
                             label = { Text(item.title) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -185,96 +162,45 @@ fun MainAppScaffold(
             }
         }
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Splash.route,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+        NavHost(navController = navController, startDestination = Screen.Splash.route, modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             composable(Screen.Splash.route) {
-                SplashScreen(
-                    onNavigateToHome = {
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(Screen.Splash.route) { inclusive = true }
-                        }
-                    }
-                )
+                SplashScreen(onNavigateToHome = { navController.navigate(Screen.Home.route) { popUpTo(Screen.Splash.route) { inclusive = true } } })
             }
-
             composable(Screen.Home.route) {
-                val homeViewModel = androidx.lifecycle.viewmodel.compose.viewModel {
-                    HomeViewModel(container.prayerRepository, container.settingsRepository)
-                }
-                HomeScreen(
-                    viewModel = homeViewModel,
-                    onNavigateToPrayer = { navController.navigate(Screen.Salat.route) },
-                    onNavigateToQibla = { navController.navigate(Screen.Qibla.route) },
-                    onNavigateToQuran = { navController.navigate(Screen.Quran.route) },
-                    onNavigateToDua = { navController.navigate(Screen.Dua.route) },
-                    onNavigateToDzikr = { navController.navigate(Screen.Dzikr.route) },
-                    onNavigateToCalendar = { navController.navigate(Screen.Calendar.route) }
-                )
+                val homeViewModel = androidx.lifecycle.viewmodel.compose.viewModel { HomeViewModel(container.prayerRepository, container.settingsRepository) }
+                HomeScreen(viewModel = homeViewModel, onNavigateToPrayer = { navController.navigate(Screen.Salat.route) }, onNavigateToQibla = { navController.navigate(Screen.Qibla.route) }, onNavigateToQuran = { navController.navigate(Screen.Quran.route) }, onNavigateToDua = { navController.navigate(Screen.Dua.route) }, onNavigateToDzikr = { navController.navigate(Screen.Dzikr.route) }, onNavigateToCalendar = { navController.navigate(Screen.Calendar.route) })
             }
-
             composable(Screen.Salat.route) {
-                val prayerViewModel = androidx.lifecycle.viewmodel.compose.viewModel {
-                    PrayerViewModel(container.prayerRepository, container.settingsRepository)
-                }
+                val prayerViewModel = androidx.lifecycle.viewmodel.compose.viewModel { PrayerViewModel(container.prayerRepository, container.settingsRepository) }
                 PrayerScheduleScreen(viewModel = prayerViewModel)
             }
-
             composable(Screen.Quran.route) {
-                val quranViewModel = androidx.lifecycle.viewmodel.compose.viewModel {
-                    QuranViewModel(container.quranRepository)
-                }
+                val quranViewModel = androidx.lifecycle.viewmodel.compose.viewModel { QuranViewModel(container.quranRepository) }
                 QuranScreen(viewModel = quranViewModel)
             }
-
             composable(Screen.More.route) {
-                MoreScreen(
-                    onNavigateToQibla = { navController.navigate(Screen.Qibla.route) },
-                    onNavigateToDua = { navController.navigate(Screen.Dua.route) },
-                    onNavigateToDzikr = { navController.navigate(Screen.Dzikr.route) },
-                    onNavigateToCalendar = { navController.navigate(Screen.Calendar.route) },
-                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
-                )
+                MoreScreen(onNavigateToQibla = { navController.navigate(Screen.Qibla.route) }, onNavigateToDua = { navController.navigate(Screen.Dua.route) }, onNavigateToDzikr = { navController.navigate(Screen.Dzikr.route) }, onNavigateToCalendar = { navController.navigate(Screen.Calendar.route) }, onNavigateToSettings = { navController.navigate(Screen.Settings.route) })
             }
-
             composable(Screen.Qibla.route) {
                 val compassSensorManager = container.provideCompassSensorManager()
-                val qiblaViewModel = androidx.lifecycle.viewmodel.compose.viewModel {
-                    QiblaViewModel(compassSensorManager, container.settingsRepository)
-                }
+                val qiblaViewModel = androidx.lifecycle.viewmodel.compose.viewModel { QiblaViewModel(compassSensorManager, container.settingsRepository) }
                 QiblaScreen(viewModel = qiblaViewModel)
             }
-
             composable(Screen.Dua.route) {
-                val duaViewModel = androidx.lifecycle.viewmodel.compose.viewModel {
-                    DuaViewModel(container.duaRepository)
-                }
+                val duaViewModel = androidx.lifecycle.viewmodel.compose.viewModel { DuaViewModel(container.duaRepository) }
                 DuaScreen(viewModel = duaViewModel)
             }
-
             composable(Screen.Dzikr.route) {
                 val context = androidx.compose.ui.platform.LocalContext.current
-                val dzikrViewModel = androidx.lifecycle.viewmodel.compose.viewModel {
-                    DzikrViewModel(container.dzikrRepository, context.applicationContext)
-                }
+                val dzikrViewModel = androidx.lifecycle.viewmodel.compose.viewModel { DzikrViewModel(container.dzikrRepository, context.applicationContext) }
                 DzikrScreen(viewModel = dzikrViewModel)
             }
-
             composable(Screen.Calendar.route) {
-                val calendarViewModel = androidx.lifecycle.viewmodel.compose.viewModel {
-                    CalendarViewModel(container.calendarRepository)
-                }
+                val calendarViewModel = androidx.lifecycle.viewmodel.compose.viewModel { CalendarViewModel(container.calendarRepository) }
                 HijriCalendarScreen(viewModel = calendarViewModel)
             }
-
             composable(Screen.Settings.route) {
-                val settingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel {
-                    SettingsViewModel(container.settingsRepository)
-                }
+                val settingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel { SettingsViewModel(container.settingsRepository) }
                 SettingsScreen(viewModel = settingsViewModel)
             }
         }
