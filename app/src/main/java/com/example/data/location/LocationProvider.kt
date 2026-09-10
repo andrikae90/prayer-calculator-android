@@ -83,11 +83,11 @@ class DefaultLocationProvider(
         if (!hasFine && !hasCoarse) return null
         return suspendCancellableCoroutine { continuation ->
             val cancellation = CancellationTokenSource()
-            val task = fusedLocationClient.getCurrentLocation(
-                if (hasFine) Priority.PRIORITY_HIGH_ACCURACY else Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-                cancellation.token
-            )
-            task.addOnSuccessListener { location: Location? -> if (continuation.isActive) continuation.resume(location?.toUserLocation()) }
+            val priority = if (hasFine) Priority.PRIORITY_HIGH_ACCURACY else Priority.PRIORITY_BALANCED_POWER_ACCURACY
+            val task = fusedLocationClient.getCurrentLocation(priority, cancellation.token)
+            task.addOnSuccessListener { location: Location? ->
+                if (continuation.isActive) continuation.resume(location?.toUserLocation())
+            }
             task.addOnFailureListener { if (continuation.isActive) continuation.resume(null) }
             task.addOnCanceledListener { if (continuation.isActive) continuation.resume(null) }
             continuation.invokeOnCancellation { cancellation.cancel() }
@@ -97,36 +97,27 @@ class DefaultLocationProvider(
     override fun getActiveLocation(): UserLocation = manualLocation
 
     override suspend fun searchLocations(query: String): List<UserLocation> = withContext(Dispatchers.IO) {
-        if (query.trim().length < 3 || !Geocoder.isPresent()) return@withContext emptyList()
+        val cleanQuery = query.trim()
+        if (cleanQuery.length < 3 || !Geocoder.isPresent()) return@withContext emptyList()
         val addresses = try {
-            Geocoder(context, Locale("id", "ID")).getFromLocationName(query.trim(), 8).orEmpty()
+            Geocoder(context, Locale("id", "ID")).getFromLocationName(cleanQuery, 12).orEmpty()
         } catch (_: Exception) {
             emptyList()
         }
-        addresses.mapNotNull { it.toUserLocationOrNull() }.distinctBy { "${it.cityName}|${it.latitude}|${it.longitude}" }
+        addresses.mapNotNull { it.toUserLocationOrNull() }
+            .distinctBy { "${it.cityName}|${it.latitude}|${it.longitude}" }
     }
 
     private fun Address.toUserLocationOrNull(): UserLocation? {
-        val lat = latitude
-        val lon = longitude
-        if (lat.isNaN() || lon.isNaN()) return null
-        val subLocality = subLocality?.trim().orEmpty()
-        val locality = locality?.trim().orEmpty()
-        val subAdmin = subAdminArea?.trim().orEmpty()
-        val admin = adminArea?.trim().orEmpty()
-        val village = if (subLocality.isNotBlank()) subLocality else locality
-        val main = if (village.isNotBlank()) village else subAdmin
-        val hierarchy = listOfNotNull(
-            main.takeIf { it.isNotBlank() },
-            subAdmin.takeIf { it.isNotBlank() && it != main },
-            admin.takeIf { it.isNotBlank() }
-        ).joinToString(", ")
-        val tz = inferIndonesianTimezone(lon)
+        if (latitude.isNaN() || longitude.isNaN()) return null
+        val label = buildLocationLabel(this)
+        if (label.isBlank()) return null
+        val tz = inferIndonesianTimezone(longitude)
         return UserLocation(
-            cityName = hierarchy.ifBlank { featureName ?: "Lokasi Manual" },
-            provinceOrCountry = admin.ifBlank { "Indonesia" },
-            latitude = lat,
-            longitude = lon,
+            cityName = label,
+            provinceOrCountry = adminArea?.trim().orEmpty().ifBlank { "Indonesia" },
+            latitude = latitude,
+            longitude = longitude,
             zoneId = tz.first,
             timezoneOffsetHours = tz.second,
             elevationMeters = 0.0,
@@ -136,17 +127,18 @@ class DefaultLocationProvider(
 
     private fun Location.toUserLocation(): UserLocation {
         val tzInfo = inferIndonesianTimezone(longitude)
-        val geocoderName = try {
-            Geocoder(context, Locale("id", "ID")).getFromLocation(latitude, longitude, 1)?.firstOrNull()?.let { address ->
-                val village = address.subLocality?.trim().orEmpty().ifBlank { address.locality?.trim().orEmpty() }
-                val kecamatan = address.subAdminArea?.trim().orEmpty()
-                val kabupaten = address.adminArea?.trim().orEmpty()
-                listOf(village, kecamatan, kabupaten).filter { it.isNotBlank() }.distinct().joinToString(", ")
-            }
-        } catch (_: Exception) { null }
+        val address = try {
+            Geocoder(context, Locale("id", "ID"))
+                .getFromLocation(latitude, longitude, 1)
+                ?.firstOrNull()
+        } catch (_: Exception) {
+            null
+        }
+        val label = address?.let { buildLocationLabel(it) }
         return UserLocation(
-            cityName = geocoderName?.ifBlank { null } ?: "Lokasi Saya (${String.format(Locale.US, "%.5f, %.5f", latitude, longitude)})",
-            provinceOrCountry = tzInfo.third,
+            cityName = label?.ifBlank { null }
+                ?: "Lokasi Saya (${String.format(Locale.US, "%.5f, %.5f", latitude, longitude)})",
+            provinceOrCountry = address?.adminArea?.trim().orEmpty().ifBlank { tzInfo.third },
             latitude = latitude,
             longitude = longitude,
             zoneId = tzInfo.first,
@@ -155,6 +147,29 @@ class DefaultLocationProvider(
             isFromGps = true
         )
     }
+
+    /**
+     * Prefer the smallest useful Indonesian administrative area and then
+     * append its parent areas. Different Android geocoders populate different
+     * Address fields, so several fields are considered as fallbacks.
+     */
+    private fun buildLocationLabel(address: Address): String {
+        val village = firstNonBlank(
+            address.subLocality,
+            address.locality?.takeIf { address.subAdminArea.isNullOrBlank() },
+            address.featureName
+        )
+        val kecamatan = firstNonBlank(address.subAdminArea)
+        val kabupaten = firstNonBlank(address.locality?.takeIf { !it.equals(village, true) }, address.adminArea)
+        val parts = listOf(village, kecamatan, kabupaten)
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase(Locale.ROOT) }
+        return parts.joinToString(", ")
+    }
+
+    private fun firstNonBlank(vararg values: String?): String =
+        values.firstOrNull { !it.isNullOrBlank() }?.trim().orEmpty()
 
     private fun inferIndonesianTimezone(longitude: Double): Triple<ZoneId, Double, String> = when {
         longitude >= 125.0 -> Triple(ZoneId.of("Asia/Jayapura"), 9.0, "WIT")
