@@ -90,17 +90,13 @@ class DefaultPrayerRepository(
         timezoneOffsetHours: Double?,
         asrJuristicMethod: AsrJuristicMethod
     ): Flow<TodaySchedule> = flow {
-        // Resolve timezone based on city coordinates or explicit parameter, not server timezone
         val resolvedOffset = timezoneOffsetHours ?: resolveIndonesianTimezoneOffset(longitude)
         val resolvedZoneId = zoneId ?: resolveIndonesianZoneId(longitude)
 
         while (true) {
             val now = appClock.now(resolvedZoneId)
             val currentDate = now.toLocalDate()
-            val currentHour = now.hour
-            val currentMinute = now.minute
-            val currentSecond = now.second
-            val currentTimeInSeconds = currentHour * 3600 + currentMinute * 60 + currentSecond
+            val currentTimeInSeconds = now.hour * 3600 + now.minute * 60 + now.second
 
             val todayResult = calculateResultForDate(
                 date = currentDate,
@@ -123,7 +119,21 @@ class DefaultPrayerRepository(
                 PrayerScheduleItem(PrayerType.ISYA, todayResult.isha, todayResult.rawTimes[PrayerType.ISYA]!!.hour, todayResult.rawTimes[PrayerType.ISYA]!!.minute)
             )
 
-            // Determine next prayer and passed status
+            // Current prayer = the latest obligatory prayer that has started today.
+            // Next prayer = the first prayer that has not started yet.
+            // This keeps Asar displayed as the current prayer at 15:03, while Maghrib remains next.
+            val obligatoryPrayers = scheduleData.filter {
+                it.type == PrayerType.SUBUH ||
+                    it.type == PrayerType.DZUHUR ||
+                    it.type == PrayerType.ASHAR ||
+                    it.type == PrayerType.MAGHRIB ||
+                    it.type == PrayerType.ISYA
+            }
+
+            val currentPrayer = obligatoryPrayers.lastOrNull {
+                currentTimeInSeconds >= it.hour * 3600 + it.minute * 60
+            }
+
             var nextFound = false
             var nextItem: PrayerScheduleItem? = null
             var minutesUntilNext = 0
@@ -145,7 +155,6 @@ class DefaultPrayerRepository(
                 item.copy(isNext = isNext, isPassed = isPassed)
             }
 
-            // If all prayers today have passed: NEXT EVENT MUST BE TOMORROW'S SUBUH (Audit Requirement 9)
             if (!nextFound) {
                 val tomorrowDate = currentDate.plusDays(1)
                 val tomorrowResult = calculateResultForDate(
@@ -162,12 +171,11 @@ class DefaultPrayerRepository(
                 val tomorrowSubuhHour = tomorrowResult.rawTimes[PrayerType.SUBUH]!!.hour
                 val tomorrowSubuhMinute = tomorrowResult.rawTimes[PrayerType.SUBUH]!!.minute
                 val secondsLeftToday = (24 * 3600) - currentTimeInSeconds
-                val secondsInTomorrow = (tomorrowSubuhHour * 3600) + (tomorrowSubuhMinute * 60)
+                val secondsInTomorrow = tomorrowSubuhHour * 3600 + tomorrowSubuhMinute * 60
                 val diffSeconds = secondsLeftToday + secondsInTomorrow
 
                 minutesUntilNext = diffSeconds / 60
                 secondsUntilNext = diffSeconds % 60
-
                 nextItem = PrayerScheduleItem(
                     type = PrayerType.SUBUH,
                     time = tomorrowResult.fajr,
@@ -181,7 +189,7 @@ class DefaultPrayerRepository(
             val countdownFormatted = if (nextItem != null) {
                 val hours = minutesUntilNext / 60
                 val mins = minutesUntilNext % 60
-                String.format(Locale.US, "-%02d:%02d:%02d", hours, mins, secondsUntilNext)
+                String.format(Locale.US, "%02d:%02d:%02d", hours, mins, secondsUntilNext)
             } else {
                 "--:--:--"
             }
@@ -190,11 +198,7 @@ class DefaultPrayerRepository(
             cal.set(currentDate.year, currentDate.monthValue - 1, currentDate.dayOfMonth)
             val dateFormatMasehi = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
             val dateMasehi = dateFormatMasehi.format(cal.time)
-
-            // Hijri date through audited provider
             val dateHijri = HijriDateCalculator.formatHijriDate(currentDate)
-
-            // Authentic daily Islamic reminder
             val reminder = dailyReminderRepository.getTodayReminder()
 
             emit(
@@ -205,20 +209,20 @@ class DefaultPrayerRepository(
                     prayers = mappedPrayers,
                     nextPrayer = nextItem,
                     countdownText = countdownFormatted,
+                    currentPrayer = currentPrayer,
                     dailyReminder = reminder
                 )
             )
 
-            // Delay for next tick
             delay(1000)
         }
     }
 
     private fun resolveIndonesianTimezoneOffset(longitude: Double): Double {
         return when {
-            longitude >= 125.0 -> 9.0 // WIT (Jayapura, Ambon)
-            longitude >= 115.0 -> 8.0 // WITA (Makassar, Bali, Banjarmasin)
-            else -> 7.0               // WIB (Jakarta, Bandung, Surabaya, Medan)
+            longitude >= 125.0 -> 9.0
+            longitude >= 115.0 -> 8.0
+            else -> 7.0
         }
     }
 
