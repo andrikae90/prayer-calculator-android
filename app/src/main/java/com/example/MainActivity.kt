@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,8 +16,10 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.domain.model.AppThemeSetting
+import com.example.domain.model.PrayerType
 import com.example.ui.navigation.MainAppScaffold
 import com.example.ui.theme.MyApplicationTheme
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -29,6 +32,12 @@ class MainActivity : ComponentActivity() {
     val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
         permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
     if (granted) refreshGpsLocation()
+  }
+
+  private val notificationPermissionLauncher = registerForActivityResult(
+    ActivityResultContracts.RequestPermission()
+  ) { granted ->
+    if (granted) schedulePrayerNotifications()
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,7 +63,18 @@ class MainActivity : ComponentActivity() {
       }
     }
 
+    requestNotificationPermissionIfNeeded()
     requestLocationPermissionIfNeeded()
+    schedulePrayerNotifications()
+  }
+
+  private fun requestNotificationPermissionIfNeeded() {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+      val granted = ContextCompat.checkSelfPermission(
+        this, Manifest.permission.POST_NOTIFICATIONS
+      ) == PackageManager.PERMISSION_GRANTED
+      if (!granted) notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
   }
 
   private fun requestLocationPermissionIfNeeded() {
@@ -92,9 +112,23 @@ class MainActivity : ComponentActivity() {
             longitude = gpsLocation.longitude
           )
         }
+        schedulePrayerNotifications()
       } finally {
         isRefreshingLocation = false
       }
+    }
+  }
+
+  private fun schedulePrayerNotifications() {
+    val container = (application as MuslimApp).container
+    if (!container.notificationManager.isNotificationPermissionGranted()) return
+    if (!container.settingsRepository.settingsState.value.prayerNotificationEnabled) return
+
+    lifecycleScope.launch {
+      val schedule = container.prayerRepository.getTodaySchedule().first()
+      schedule.prayers
+        .filter { it.type in setOf(PrayerType.SUBUH, PrayerType.DZUHUR, PrayerType.ASHAR, PrayerType.MAGHRIB, PrayerType.ISYA) }
+        .forEach { container.notificationManager.schedulePrayerReminder(it) }
     }
   }
 }
