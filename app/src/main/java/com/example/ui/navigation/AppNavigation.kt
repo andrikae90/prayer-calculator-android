@@ -33,7 +33,7 @@ import com.example.ui.splash.SplashScreen
 fun MainAppScaffold(
     container: AppContainer,
     onRefreshLocation: () -> Unit,
-    onNavigateToLocationSettings: () -> Unit,
+    onNavigateToManualLocation: () -> Unit,
     isRefreshingLocation: Boolean = false,
     navController: NavHostController = rememberNavController()
 ) {
@@ -58,10 +58,10 @@ fun MainAppScaffold(
             actions = {
                 if (isHomeScreen) {
                     IconButton(
-                        onClick = onNavigateToLocationSettings,
+                        onClick = onNavigateToManualLocation,
                         modifier = Modifier.testTag("manual_location_button")
                     ) {
-                        Icon(Icons.Filled.LocationOn, contentDescription = "Pilih lokasi manual")
+                        Icon(Icons.Filled.LocationOn, contentDescription = "Ubah lokasi")
                     }
                     TextButton(
                         onClick = onRefreshLocation,
@@ -69,10 +69,7 @@ fun MainAppScaffold(
                         modifier = Modifier.testTag("refresh_location_button")
                     ) {
                         if (isRefreshingLocation) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.padding(end = 8.dp).padding(2.dp),
-                                strokeWidth = 2.dp
-                            )
+                            CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp).padding(2.dp), strokeWidth = 2.dp)
                             Text("Mencari...")
                         } else {
                             Icon(Icons.Filled.Refresh, contentDescription = "Perbarui Lokasi", modifier = Modifier.padding(end = 8.dp))
@@ -96,6 +93,7 @@ fun MainAppScaffold(
             composable(Screen.Splash.route) { SplashScreen(onNavigateToHome = { navController.navigate(Screen.Home.route) { popUpTo(Screen.Splash.route) { inclusive = true } } }) }
             composable(Screen.Home.route) { val vm = androidx.lifecycle.viewmodel.compose.viewModel { HomeViewModel(container.prayerRepository, container.settingsRepository) }; HomeScreen(vm, { navController.navigate(Screen.Salat.route) }, { navController.navigate(Screen.Qibla.route) }, { navController.navigate(Screen.Quran.route) }, { navController.navigate(Screen.Dua.route) }, { navController.navigate(Screen.Dzikr.route) }, { navController.navigate(Screen.Calendar.route) }) }
             composable(Screen.Salat.route) { val vm = androidx.lifecycle.viewmodel.compose.viewModel { PrayerViewModel(container.prayerRepository, container.settingsRepository) }; PrayerScheduleScreen(vm) }
+            composable(Screen.Quran.route) { val vm = androidx.lifecycle.viewmodel.compose.viewModel { QuranViewModel(container.quranRepository, container.settingsRepository) }; PrayerScheduleScreen(vm) }
             composable(Screen.Quran.route) { val vm = androidx.lifecycle.viewmodel.compose.viewModel { QuranViewModel(container.quranRepository, container.quranAyahRepository) }; QuranScreen(vm) }
             composable(Screen.More.route) { MoreScreen({ navController.navigate(Screen.Qibla.route) }, { navController.navigate(Screen.Dua.route) }, { navController.navigate(Screen.Dzikr.route) }, { navController.navigate(Screen.Calendar.route) }, { navController.navigate(Screen.Settings.route) }) }
             composable(Screen.Qibla.route) { val sensor = container.provideCompassSensorManager(); val vm = androidx.lifecycle.viewmodel.compose.viewModel { QiblaViewModel(sensor, container.settingsRepository) }; QiblaScreen(vm) }
