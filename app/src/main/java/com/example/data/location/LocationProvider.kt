@@ -25,6 +25,7 @@ data class UserLocation(
     val longitude: Double,
     val zoneId: ZoneId,
     val timezoneOffsetHours: Double,
+    val elevationMeters: Double = 0.0,
     val isFromGps: Boolean = false
 ) {
     val timezoneName: String
@@ -128,6 +129,7 @@ class DefaultLocationProvider(
             longitude = lon,
             zoneId = tz.first,
             timezoneOffsetHours = tz.second,
+            elevationMeters = 0.0,
             isFromGps = false
         )
     }
@@ -149,6 +151,7 @@ class DefaultLocationProvider(
             longitude = longitude,
             zoneId = tzInfo.first,
             timezoneOffsetHours = tzInfo.second,
+            elevationMeters = if (hasAltitude()) altitude else 0.0,
             isFromGps = true
         )
     }
