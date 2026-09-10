@@ -24,10 +24,9 @@ import kotlin.math.tan
 /**
  * Astronomical prayer-time engine.
  *
- * KEMENAG_INDONESIA follows the Indonesian Kemenag parameter profile used in
- * local Kemenag schedules: Subuh -20°, Isya -18°, Asar standard (shadow factor 1),
- * and a 2-minute ihtiyat on the calculated output. Sunrise/Maghrib use the
- * apparent solar altitude with refraction/semidiameter and elevation-based dip.
+ * KEMENAG_INDONESIA uses Subuh -20°, Isya -18°, Asar standard (shadow factor 1),
+ * with Indonesian ihtiyat/rounding conventions. The Gregorian correction is
+ * applied in the Julian-date calculation before the solar ephemeris is evaluated.
  *
  * This is an independent calculation engine. It is not a network connection to
  * Kemenag and is not labelled as an official Kemenag table until validated against
@@ -37,7 +36,15 @@ object PrayerCalculator {
     private const val KEMENAG_FAJR_ANGLE = -20.0
     private const val KEMENAG_ISHA_ANGLE = -18.0
     private const val DEFAULT_APPARENT_HORIZON_DEGREES = 0.8333
-    private const val KEMENAG_IHTIYAT_MINUTES = 2
+
+    // Kemenag/SIHAT-style published schedule convention: calculated times are
+    // rounded up to the next minute, with special treatment for sunrise.
+    private const val KEMENAG_SUBUH_IHTIYAT_MINUTES = 2
+    private const val KEMENAG_DHUHR_IHTIYAT_MINUTES = 3
+    private const val KEMENAG_ASHAR_IHTIYAT_MINUTES = 2
+    private const val KEMENAG_MAGHRIB_IHTIYAT_MINUTES = 2
+    private const val KEMENAG_ISYA_IHTIYAT_MINUTES = 2
+    private const val KEMENAG_SUNRISE_OFFSET_MINUTES = -2
 
     private fun d2r(d: Double): Double = d * Math.PI / 180.0
     private fun r2d(r: Double): Double = r * 180.0 / Math.PI
@@ -109,7 +116,6 @@ object PrayerCalculator {
         val isKemenag = method == PrayerCalculationMethod.KEMENAG_INDONESIA
         val fajrAngle = if (isKemenag) KEMENAG_FAJR_ANGLE else method.fajrAngleDegrees
         val ishaAngle = if (isKemenag) KEMENAG_ISHA_ANGLE else method.ishaAngleDegrees
-        val effectiveIhtiyat = if (isKemenag) KEMENAG_IHTIYAT_MINUTES else ihtiyatMinutes
         val sunriseAltitude = apparentHorizonAltitude(if (isKemenag) elevationMeters else 0.0)
 
         val fajrH = hourAngle(fajrAngle)
@@ -121,22 +127,45 @@ object PrayerCalculator {
 
         val fajrRaw = noon - fajrH
         val sunriseRaw = noon - sunriseH
-        val dhuhrRaw = noon + effectiveIhtiyat / 60.0
+        val dhuhrRaw = noon
         val asrRaw = noon + asrH
         val sunsetRaw = noon + sunriseH
-        val maghribRaw = sunsetRaw + effectiveIhtiyat / 60.0
+        val maghribRaw = sunsetRaw
         val ishaRaw = noon + ishaH
         val imsakRaw = fajrRaw - imsakIntervalMinutes / 60.0
 
         fun formatTime(rawHours: Double, prayerType: PrayerType): Pair<String, LocalTime> {
             val userOffset = customOffsets[prayerType] ?: 0
             val totalSecondsExact = fixHour(rawHours) * 3600.0 + userOffset * 60.0
-            val totalMinutesRounded = when (roundingMode) {
-                PrayerRoundingMode.NONE -> (totalSecondsExact / 60.0).toInt()
-                PrayerRoundingMode.FLOOR -> floor(totalSecondsExact / 60.0).toInt()
-                PrayerRoundingMode.NEAREST -> Math.round(totalSecondsExact / 60.0).toInt()
-                PrayerRoundingMode.CEIL -> kotlin.math.ceil(totalSecondsExact / 60.0).toInt()
+
+            // Kemenag published schedules distinguish Terbit from prayer times:
+            // seconds are discarded for Terbit, then 2 minutes are subtracted.
+            // Prayer times use minute rounding upward before their ihtiyat.
+            val baseMinutes = if (isKemenag && prayerType == PrayerType.TERBIT) {
+                floor(totalSecondsExact / 60.0).toInt()
+            } else {
+                when (roundingMode) {
+                    PrayerRoundingMode.NONE -> (totalSecondsExact / 60.0).toInt()
+                    PrayerRoundingMode.FLOOR -> floor(totalSecondsExact / 60.0).toInt()
+                    PrayerRoundingMode.NEAREST -> Math.round(totalSecondsExact / 60.0).toInt()
+                    PrayerRoundingMode.CEIL -> kotlin.math.ceil(totalSecondsExact / 60.0).toInt()
+                }
             }
+
+            val ihtiyat = if (isKemenag) {
+                when (prayerType) {
+                    PrayerType.IMSAK, PrayerType.SUBUH -> KEMENAG_SUBUH_IHTIYAT_MINUTES
+                    PrayerType.DZUHUR -> KEMENAG_DHUHR_IHTIYAT_MINUTES
+                    PrayerType.ASHAR -> KEMENAG_ASHAR_IHTIYAT_MINUTES
+                    PrayerType.MAGHRIB -> KEMENAG_MAGHRIB_IHTIYAT_MINUTES
+                    PrayerType.ISYA -> KEMENAG_ISYA_IHTIYAT_MINUTES
+                    PrayerType.TERBIT -> KEMENAG_SUNRISE_OFFSET_MINUTES
+                }
+            } else {
+                0
+            }
+
+            val totalMinutesRounded = baseMinutes + ihtiyat
             val finalHour = ((totalMinutesRounded / 60) % 24 + 24) % 24
             val finalMinute = ((totalMinutesRounded % 60) + 60) % 60
             return String.format(Locale.US, "%02d:%02d", finalHour, finalMinute) to LocalTime.of(finalHour, finalMinute)
