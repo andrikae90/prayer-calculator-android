@@ -1,5 +1,9 @@
 package com.example.ui.settings
 
+import android.content.Context
+import android.content.Intent
+import android.location.LocationManager
+import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.location.UserLocation
@@ -43,6 +48,7 @@ private fun ManualLocationDialog(viewModel: SettingsViewModel, onDismiss: () -> 
     val results by viewModel.locationResults.collectAsState()
     val searching by viewModel.isSearchingLocation.collectAsState()
     val settings by viewModel.settings.collectAsState()
+    val context = LocalContext.current
 
     AlertDialog(
         onDismissRequest = { viewModel.clearLocationResults(); onDismiss() },
@@ -72,18 +78,32 @@ private fun ManualLocationDialog(viewModel: SettingsViewModel, onDismiss: () -> 
                 }
                 HorizontalDivider()
                 TextButton(
-                    onClick = { viewModel.useGpsLocation(); onDismiss() },
+                    onClick = { refreshGpsLocation(context, viewModel) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Filled.MyLocation, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Gunakan Lokasi GPS")
+                    Text("Perbarui Lokasi GPS")
                 }
+                Text("Jika GPS mati, tombol ini akan membuka Pengaturan Lokasi HP.", style = MaterialTheme.typography.labelSmall)
                 Text("Lokasi aktif: ${settings.cityName}", style = MaterialTheme.typography.labelSmall)
             }
         },
         confirmButton = { TextButton(onClick = { viewModel.clearLocationResults(); onDismiss() }) { Text("Tutup") } }
     )
+}
+
+private fun refreshGpsLocation(context: Context, viewModel: SettingsViewModel) {
+    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+    val gpsEnabled = locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true
+    val networkEnabled = locationManager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true
+
+    if (!gpsEnabled && !networkEnabled) {
+        context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+        return
+    }
+
+    viewModel.useGpsLocation()
 }
 
 @Composable
