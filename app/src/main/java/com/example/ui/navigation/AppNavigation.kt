@@ -33,7 +33,6 @@ import com.example.ui.splash.SplashScreen
 fun MainAppScaffold(
     container: AppContainer,
     onRefreshLocation: () -> Unit,
-    onNavigateToManualLocation: () -> Unit,
     isRefreshingLocation: Boolean = false,
     navController: NavHostController = rememberNavController()
 ) {
@@ -57,10 +56,15 @@ fun MainAppScaffold(
             navigationIcon = { if (!isHomeScreen) IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali") } },
             actions = {
                 if (isHomeScreen) {
-                    IconButton(onClick = onNavigateToManualLocation, modifier = Modifier.testTag("manual_location_button")) {
-                        Icon(Icons.Filled.LocationOn, contentDescription = "Ubah lokasi")
-                    }
-                    TextButton(onClick = onRefreshLocation, enabled = !isRefreshingLocation, modifier = Modifier.testTag("refresh_location_button")) {
+                    IconButton(
+                        onClick = { navController.navigate(Screen.Settings.route) },
+                        modifier = Modifier.testTag("manual_location_button")
+                    ) { Icon(Icons.Filled.LocationOn, contentDescription = "Ubah lokasi") }
+                    TextButton(
+                        onClick = onRefreshLocation,
+                        enabled = !isRefreshingLocation,
+                        modifier = Modifier.testTag("refresh_location_button")
+                    ) {
                         if (isRefreshingLocation) {
                             CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp).padding(2.dp), strokeWidth = 2.dp)
                             Text("Mencari...")
