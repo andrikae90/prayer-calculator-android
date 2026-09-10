@@ -5,9 +5,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
 import android.media.AudioManager
-import android.media.MediaPlayer
 import android.media.ToneGenerator
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
@@ -47,8 +45,11 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
 
         when (sound) {
             PrayerNotificationSound.BIP_PANJANG -> playLongBeep(context)
-            PrayerNotificationSound.ADZAN_LENGKAP -> playBundledAudio(context, "adzan_lengkap")
-            PrayerNotificationSound.TAKBIR_SAJA -> playBundledAudio(context, "takbir_saja")
+            PrayerNotificationSound.ADZAN_LENGKAP -> {
+                val audioName = if (prayerName.equals("Subuh", ignoreCase = true)) "adzan_subuh" else "adzan_lengkap"
+                startPrayerAudioService(context, audioName)
+            }
+            PrayerNotificationSound.TAKBIR_SAJA -> startPrayerAudioService(context, "takbir_saja")
             PrayerNotificationSound.GETAR_SAJA,
             PrayerNotificationSound.TANPA_NOTIFIKASI -> Unit
         }
@@ -60,33 +61,12 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
         android.os.Handler(context.mainLooper).postDelayed({ tone.release() }, 1300)
     }
 
-    /**
-     * Plays a legally distributable audio asset bundled in res/raw.
-     * Expected filenames:
-     *   res/raw/adzan_lengkap.*
-     *   res/raw/takbir_saja.*
-     *
-     * The resource is looked up dynamically so the project can compile even
-     * before the licensed audio files are supplied. If the asset is missing,
-     * the notification still appears but no audio is played.
-     */
-    private fun playBundledAudio(context: Context, resourceName: String) {
-        val resourceId = context.resources.getIdentifier(resourceName, "raw", context.packageName)
-        if (resourceId == 0) return
-
-        val player = runCatching {
-            MediaPlayer.create(context, resourceId)?.apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build()
-                )
-                setOnCompletionListener { it.release() }
-                setOnErrorListener { mp, _, _ -> mp.release(); true }
-            }
-        }.getOrNull() ?: return
-
-        runCatching { player.start() }.onFailure { player.release() }
+    private fun startPrayerAudioService(context: Context, resourceName: String) {
+        val audioIntent = Intent(context, PrayerAudioService::class.java).apply {
+            putExtra(PrayerAudioService.EXTRA_AUDIO_NAME, resourceName)
+        }
+        runCatching {
+            context.startForegroundService(audioIntent)
+        }
     }
 }
