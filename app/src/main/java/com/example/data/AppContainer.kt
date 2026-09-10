@@ -52,7 +52,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     override val duaRepository: DuaRepository by lazy { LocalDuaRepository() }
     override val dzikrRepository: DzikrRepository by lazy { LocalDzikrRepository() }
     override val calendarRepository: CalendarRepository by lazy { DefaultCalendarRepository() }
-    override val settingsRepository: SettingsRepository by lazy { DefaultSettingsRepository() }
+    override val settingsRepository: SettingsRepository by lazy { DefaultSettingsRepository(context) }
     override val notificationManager: PrayerNotificationManager by lazy {
         DefaultPrayerNotificationManager(context).apply { initializeChannels() }
     }
