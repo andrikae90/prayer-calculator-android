@@ -57,17 +57,10 @@ fun MainAppScaffold(
             navigationIcon = { if (!isHomeScreen) IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali") } },
             actions = {
                 if (isHomeScreen) {
-                    IconButton(
-                        onClick = onNavigateToManualLocation,
-                        modifier = Modifier.testTag("manual_location_button")
-                    ) {
+                    IconButton(onClick = onNavigateToManualLocation, modifier = Modifier.testTag("manual_location_button")) {
                         Icon(Icons.Filled.LocationOn, contentDescription = "Ubah lokasi")
                     }
-                    TextButton(
-                        onClick = onRefreshLocation,
-                        enabled = !isRefreshingLocation,
-                        modifier = Modifier.testTag("refresh_location_button")
-                    ) {
+                    TextButton(onClick = onRefreshLocation, enabled = !isRefreshingLocation, modifier = Modifier.testTag("refresh_location_button")) {
                         if (isRefreshingLocation) {
                             CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp).padding(2.dp), strokeWidth = 2.dp)
                             Text("Mencari...")
@@ -78,12 +71,7 @@ fun MainAppScaffold(
                     }
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-                titleContentColor = MaterialTheme.colorScheme.onSurface,
-                navigationIconContentColor = MaterialTheme.colorScheme.primary,
-                actionIconContentColor = MaterialTheme.colorScheme.primary
-            )
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface, titleContentColor = MaterialTheme.colorScheme.onSurface, navigationIconContentColor = MaterialTheme.colorScheme.primary, actionIconContentColor = MaterialTheme.colorScheme.primary)
         ) },
         bottomBar = { if (isBottomNavVisible) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.primary, modifier = Modifier.testTag("main_bottom_nav")) {
             bottomNavItems.forEach { item -> val selected = currentRoute == item.route; NavigationBarItem(selected = selected, onClick = { if (!selected) navController.navigate(item.route) { popUpTo(navController.graph.findStartDestination().id) { saveState = true }; launchSingleTop = true; restoreState = true } }, icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = item.title) }, label = { Text(item.title) }, modifier = Modifier.testTag("nav_item_${item.route}")) }
@@ -93,7 +81,6 @@ fun MainAppScaffold(
             composable(Screen.Splash.route) { SplashScreen(onNavigateToHome = { navController.navigate(Screen.Home.route) { popUpTo(Screen.Splash.route) { inclusive = true } } }) }
             composable(Screen.Home.route) { val vm = androidx.lifecycle.viewmodel.compose.viewModel { HomeViewModel(container.prayerRepository, container.settingsRepository) }; HomeScreen(vm, { navController.navigate(Screen.Salat.route) }, { navController.navigate(Screen.Qibla.route) }, { navController.navigate(Screen.Quran.route) }, { navController.navigate(Screen.Dua.route) }, { navController.navigate(Screen.Dzikr.route) }, { navController.navigate(Screen.Calendar.route) }) }
             composable(Screen.Salat.route) { val vm = androidx.lifecycle.viewmodel.compose.viewModel { PrayerViewModel(container.prayerRepository, container.settingsRepository) }; PrayerScheduleScreen(vm) }
-            composable(Screen.Quran.route) { val vm = androidx.lifecycle.viewmodel.compose.viewModel { QuranViewModel(container.quranRepository, container.settingsRepository) }; PrayerScheduleScreen(vm) }
             composable(Screen.Quran.route) { val vm = androidx.lifecycle.viewmodel.compose.viewModel { QuranViewModel(container.quranRepository, container.quranAyahRepository) }; QuranScreen(vm) }
             composable(Screen.More.route) { MoreScreen({ navController.navigate(Screen.Qibla.route) }, { navController.navigate(Screen.Dua.route) }, { navController.navigate(Screen.Dzikr.route) }, { navController.navigate(Screen.Calendar.route) }, { navController.navigate(Screen.Settings.route) }) }
             composable(Screen.Qibla.route) { val sensor = container.provideCompassSensorManager(); val vm = androidx.lifecycle.viewmodel.compose.viewModel { QiblaViewModel(sensor, container.settingsRepository) }; QiblaScreen(vm) }
