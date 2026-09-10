@@ -8,6 +8,7 @@ import com.example.data.repository.SettingsRepository
 import com.example.domain.model.AppSettings
 import com.example.domain.model.AppThemeSetting
 import com.example.domain.model.CalculationMethod
+import com.example.domain.model.PrayerNotificationSound
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -82,6 +83,12 @@ class SettingsViewModel(
     fun togglePrayerNotification(enabled: Boolean) { settingsRepository.updateSettings { it.copy(prayerNotificationEnabled = enabled) } }
     fun toggleAdzanSound(enabled: Boolean) { settingsRepository.updateSettings { it.copy(adzanSoundEnabled = enabled) } }
     fun selectAdzanVoice(voice: String) { settingsRepository.updateSettings { it.copy(selectedAdzanVoice = voice) } }
+    fun selectNotificationSound(sound: PrayerNotificationSound) { settingsRepository.updateSettings { it.copy(notificationSound = sound) } }
+    fun toggleSubuhNotification(enabled: Boolean) { settingsRepository.updateSettings { it.copy(subuhNotificationEnabled = enabled) } }
+    fun toggleDzuhurNotification(enabled: Boolean) { settingsRepository.updateSettings { it.copy(dzuhurNotificationEnabled = enabled) } }
+    fun toggleAsharNotification(enabled: Boolean) { settingsRepository.updateSettings { it.copy(asharNotificationEnabled = enabled) } }
+    fun toggleMaghribNotification(enabled: Boolean) { settingsRepository.updateSettings { it.copy(maghribNotificationEnabled = enabled) } }
+    fun toggleIsyaNotification(enabled: Boolean) { settingsRepository.updateSettings { it.copy(isyaNotificationEnabled = enabled) } }
     fun updateSubuhOffset(offsetMinutes: Int) { settingsRepository.updateSettings { it.copy(subuhOffsetMinutes = offsetMinutes) } }
     fun updateDzuhurOffset(offsetMinutes: Int) { settingsRepository.updateSettings { it.copy(dzuhurOffsetMinutes = offsetMinutes) } }
     fun updateAsharOffset(offsetMinutes: Int) { settingsRepository.updateSettings { it.copy(asharOffsetMinutes = offsetMinutes) } }
