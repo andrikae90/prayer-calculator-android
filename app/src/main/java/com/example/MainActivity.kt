@@ -42,7 +42,10 @@ class MainActivity : ComponentActivity() {
       }
 
       MyApplicationTheme(darkTheme = isDarkTheme) {
-        MainAppScaffold(container = container)
+        MainAppScaffold(
+          container = container,
+          onRefreshLocation = { requestLocationPermissionIfNeeded() }
+        )
       }
     }
 
