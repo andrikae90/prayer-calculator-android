@@ -56,16 +56,16 @@ class QuranAudioController {
             )
             setDataSource(url)
             setOnPreparedListener {
-                isLoading = false
+                this@QuranAudioController.isLoading = false
                 start()
-                isPlaying = true
+                this@QuranAudioController.isPlaying = true
             }
             setOnCompletionListener {
-                isPlaying = false
+                this@QuranAudioController.isPlaying = false
             }
             setOnErrorListener { _, _, _ ->
-                isLoading = false
-                isPlaying = false
+                this@QuranAudioController.isLoading = false
+                this@QuranAudioController.isPlaying = false
                 release()
                 true
             }
