@@ -17,7 +17,9 @@ import com.example.data.repository.LocalDuaRepository
 import com.example.data.repository.LocalDzikrRepository
 import com.example.data.repository.LocalQuranRepository
 import com.example.data.repository.PrayerRepository
+import com.example.data.repository.QuranAyahRepository
 import com.example.data.repository.QuranRepository
+import com.example.data.repository.RemoteQuranAyahRepository
 import com.example.data.repository.SettingsRepository
 import com.example.data.sensor.CompassSensorManager
 import com.example.data.util.AppClock
@@ -28,6 +30,7 @@ interface AppContainer {
     val locationProvider: LocationProvider
     val prayerRepository: PrayerRepository
     val quranRepository: QuranRepository
+    val quranAyahRepository: QuranAyahRepository
     val duaRepository: DuaRepository
     val dzikrRepository: DzikrRepository
     val calendarRepository: CalendarRepository
@@ -49,6 +52,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         )
     }
     override val quranRepository: QuranRepository by lazy { LocalQuranRepository() }
+    override val quranAyahRepository: QuranAyahRepository by lazy { RemoteQuranAyahRepository() }
     override val duaRepository: DuaRepository by lazy { LocalDuaRepository() }
     override val dzikrRepository: DzikrRepository by lazy { LocalDzikrRepository() }
     override val calendarRepository: CalendarRepository by lazy { DefaultCalendarRepository() }
