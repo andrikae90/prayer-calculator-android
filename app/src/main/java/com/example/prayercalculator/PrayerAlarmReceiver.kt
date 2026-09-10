@@ -36,11 +36,7 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
         when (selectedSound) {
             PrayerNotificationSound.BIP_PANJANG -> playLongBeep()
             PrayerNotificationSound.ADZAN_LENGKAP -> {
-                val audioName = if (prayerName.equals("Subuh", ignoreCase = true)) {
-                    "adzan_subuh"
-                } else {
-                    "adzan_lengkap"
-                }
+                val audioName = if (prayerName.equals("Subuh", ignoreCase = true)) "adzan_subuh" else "adzan_lengkap"
                 playBundledAudio(context, audioName)
             }
             PrayerNotificationSound.TAKBIR_SAJA -> playBundledAudio(context, "takbir_saja")
@@ -58,7 +54,6 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
     private fun playBundledAudio(context: Context, resourceName: String) {
         val resourceId = context.resources.getIdentifier(resourceName, "raw", context.packageName)
         if (resourceId == 0) return
-
         val player = MediaPlayer.create(context, resourceId) ?: return
         player.setAudioAttributes(
             AudioAttributes.Builder()
@@ -67,10 +62,7 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 .build()
         )
         player.setOnCompletionListener { it.release() }
-        player.setOnErrorListener { mp, _, _ ->
-            mp.release()
-            true
-        }
+        player.setOnErrorListener { mp, _, _ -> mp.release(); true }
         player.start()
     }
 }
