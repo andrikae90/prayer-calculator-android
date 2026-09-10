@@ -28,7 +28,14 @@ class SettingsViewModel(
 
     fun selectLocation(location: UserLocation) {
         locationProvider.setManualLocation(location)
-        settingsRepository.updateSettings { it.copy(cityName = location.cityName, latitude = location.latitude, longitude = location.longitude) }
+        settingsRepository.updateSettings {
+            it.copy(
+                cityName = location.cityName,
+                latitude = location.latitude,
+                longitude = location.longitude,
+                elevationMeters = location.elevationMeters
+            )
+        }
         _locationResults.value = emptyList()
     }
 
@@ -36,7 +43,14 @@ class SettingsViewModel(
         viewModelScope.launch {
             val location = locationProvider.getCurrentLocation() ?: return@launch
             locationProvider.setManualLocation(location)
-            settingsRepository.updateSettings { it.copy(cityName = location.cityName, latitude = location.latitude, longitude = location.longitude) }
+            settingsRepository.updateSettings {
+                it.copy(
+                    cityName = location.cityName,
+                    latitude = location.latitude,
+                    longitude = location.longitude,
+                    elevationMeters = location.elevationMeters
+                )
+            }
         }
     }
 
