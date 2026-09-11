@@ -135,9 +135,25 @@ private fun QuranReaderDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("${surah.nameLatin} • ${surah.nameArabic}", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
                 Text("${surah.translation} • ${surah.ayahCount} ayat", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (ayahs.isNotEmpty()) {
+                    Button(
+                        onClick = {
+                            if (audioController.isPlayingAll || audioController.isLoading) audioController.stopAll()
+                            else audioController.playAll(surah.number, ayahs.map { it.number })
+                        },
+                        modifier = Modifier.fillMaxWidth().testTag("quran_play_all")
+                    ) {
+                        Icon(
+                            imageVector = if (audioController.isPlayingAll || audioController.isLoading) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            contentDescription = null
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (audioController.isPlayingAll || audioController.isLoading) "Hentikan Semua Ayat" else "Putar Semua Ayat")
+                    }
+                }
             }
         },
         text = {
