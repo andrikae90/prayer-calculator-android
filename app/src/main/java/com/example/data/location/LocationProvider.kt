@@ -149,27 +149,38 @@ class DefaultLocationProvider(
     }
 
     /**
-     * Prefer the smallest useful Indonesian administrative area and then
-     * append its parent areas. Different Android geocoders populate different
-     * Address fields, so several fields are considered as fallbacks.
+     * Build an Indonesian location label in the user-friendly order:
+     * village, Kecamatan, Kabupaten/Kota. Android Geocoder implementations
+     * can put these administrative levels in different Address fields, so
+     * explicit Kecamatan/Kabupaten labels are prioritized before fallbacks.
      */
     private fun buildLocationLabel(address: Address): String {
-        val village = firstNonBlank(
+        val raw = listOf(
             address.subLocality,
-            address.locality?.takeIf { address.subAdminArea.isNullOrBlank() },
+            address.locality,
+            address.subAdminArea,
+            address.adminArea,
             address.featureName
-        )
-        val kecamatan = firstNonBlank(address.subAdminArea)
-        val kabupaten = firstNonBlank(address.locality?.takeIf { !it.equals(village, true) }, address.adminArea)
+        ).map { it?.trim().orEmpty() }.filter { it.isNotBlank() }
+
+        val kecamatan = raw.firstOrNull { it.contains("kecamatan", ignoreCase = true) }
+            ?: address.subAdminArea?.trim().takeUnless { it.isNullOrBlank() }
+        val kabupaten = raw.firstOrNull {
+            it.contains("kabupaten", ignoreCase = true) || it.contains("kota", ignoreCase = true)
+        } ?: address.locality?.trim().takeUnless { it.isNullOrBlank() && kecamatan == null }
+
+        val village = address.subLocality?.trim().takeUnless { it.isNullOrBlank() }
+            ?: address.featureName?.trim().takeUnless { it.isNullOrBlank() }
+            ?: raw.firstOrNull { candidate ->
+                candidate != kecamatan && candidate != kabupaten &&
+                    !candidate.contains("provinsi", ignoreCase = true)
+            }
+
         val parts = listOf(village, kecamatan, kabupaten)
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
+            .mapNotNull { it?.trim()?.takeIf(String::isNotBlank) }
             .distinctBy { it.lowercase(Locale.ROOT) }
         return parts.joinToString(", ")
     }
-
-    private fun firstNonBlank(vararg values: String?): String =
-        values.firstOrNull { !it.isNullOrBlank() }?.trim().orEmpty()
 
     private fun inferIndonesianTimezone(longitude: Double): Triple<ZoneId, Double, String> = when {
         longitude >= 125.0 -> Triple(ZoneId.of("Asia/Jayapura"), 9.0, "WIT")
