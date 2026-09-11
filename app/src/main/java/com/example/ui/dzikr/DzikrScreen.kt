@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.*
@@ -52,10 +53,12 @@ fun DzikrScreen(viewModel: DzikrViewModel, modifier: Modifier = Modifier) {
         when (selectedTab) {
             DzikrTab.TASBIH -> TasbihDigitalContent(
                 tasbihState = tasbihState,
+                customPhrases = viewModel.customPhrases.collectAsState().value,
                 onIncrement = viewModel::incrementTasbih,
                 onReset = viewModel::resetTasbih,
                 onSetTarget = viewModel::setTasbihTarget,
-                onToggleVibration = viewModel::toggleVibration
+                onToggleVibration = viewModel::toggleVibration,
+                onAddCustomPhrase = viewModel::addCustomPhrase
             )
             else -> DzikrReadingList(selectedTab.displayName, dzikrList)
         }
@@ -65,17 +68,22 @@ fun DzikrScreen(viewModel: DzikrViewModel, modifier: Modifier = Modifier) {
 @Composable
 private fun TasbihDigitalContent(
     tasbihState: TasbihState,
+    customPhrases: List<String>,
     onIncrement: () -> Unit,
     onReset: () -> Unit,
     onSetTarget: (Int) -> Unit,
-    onToggleVibration: () -> Unit
+    onToggleVibration: () -> Unit,
+    onAddCustomPhrase: (String) -> Unit
 ) {
     var showResetDialog by remember { mutableStateOf(false) }
     var showTargetDialog by remember { mutableStateOf(false) }
+    var showCustomPhraseDialog by remember { mutableStateOf(false) }
     var targetInput by remember { mutableStateOf("") }
+    var customPhraseInput by remember { mutableStateOf("") }
     var selectedPhrase by remember { mutableStateOf("Subhanallah") }
     val phrases = listOf("Subhanallah", "Alhamdulillah", "Allahu Akbar", "Astaghfirullah", "Laa Ilaha Illallah")
 
+    val allPhrases = phrases + customPhrases.filterNot { it in phrases }
     val progress = if (tasbihState.target > 0) {
         (tasbihState.count.toFloat() / tasbihState.target.toFloat()).coerceIn(0f, 1f)
     } else 0f
@@ -88,11 +96,22 @@ private fun TasbihDigitalContent(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                items(phrases) { phrase ->
+                items(allPhrases) { phrase ->
                     FilterChip(
                         selected = phrase == selectedPhrase,
                         onClick = { selectedPhrase = phrase },
                         label = { Text(phrase) }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = false,
+                        onClick = {
+                            customPhraseInput = ""
+                            showCustomPhraseDialog = true
+                        },
+                        label = { Text("Dzikir Sendiri") },
+                        leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null, Modifier.size(18.dp)) }
                     )
                 }
             }
@@ -132,7 +151,7 @@ private fun TasbihDigitalContent(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(selectedPhrase, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(selectedPhrase, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 8.dp))
                     Spacer(Modifier.height(4.dp))
                     Text("${tasbihState.count}", style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp))
                     Text("/ ${tasbihState.target}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -164,6 +183,37 @@ private fun TasbihDigitalContent(
                 Text(if (tasbihState.isVibrationEnabled) "Getar: Aktif" else "Getar: Nonaktif")
             }
         }
+    }
+
+    if (showCustomPhraseDialog) {
+        AlertDialog(
+            onDismissRequest = { showCustomPhraseDialog = false },
+            title = { Text("Dzikir Sendiri") },
+            text = {
+                OutlinedTextField(
+                    value = customPhraseInput,
+                    onValueChange = { value -> if (value.length <= 100) customPhraseInput = value },
+                    label = { Text("Tulis dzikir yang ingin dihitung") },
+                    placeholder = { Text("Contoh: Laa ilaha illallah") },
+                    singleLine = false,
+                    minLines = 2,
+                    maxLines = 3,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val phrase = customPhraseInput.trim()
+                    if (phrase.isNotEmpty()) {
+                        onAddCustomPhrase(phrase)
+                        selectedPhrase = phrase
+                        showCustomPhraseDialog = false
+                    }
+                }) { Text("Simpan") }
+            },
+            dismissButton = { TextButton(onClick = { showCustomPhraseDialog = false }) { Text("Batal") } }
+        )
     }
 
     if (showTargetDialog) {
@@ -205,7 +255,8 @@ private fun TasbihDigitalContent(
             confirmButton = {
                 TextButton(onClick = { onReset(); showResetDialog = false }) { Text("Ya, Reset", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showResetDialog = false }) { Text("Batal") } }
+            dismissButton = { TextButton(onClick = { showResetDialog = false }) { Text("Batal") }
+            }
         )
     }
 }
