@@ -125,16 +125,9 @@ class DefaultPrayerRepository(
                 PrayerScheduleItem(PrayerType.ISYA, todayResult.isha, todayResult.rawTimes[PrayerType.ISYA]!!.hour, todayResult.rawTimes[PrayerType.ISYA]!!.minute)
             )
 
-            val currentPrayer = scheduleData
-                .filter {
-                    it.type == PrayerType.SUBUH ||
-                        it.type == PrayerType.DZUHUR ||
-                        it.type == PrayerType.ASHAR ||
-                        it.type == PrayerType.MAGHRIB ||
-                        it.type == PrayerType.ISYA
-                }
-                .lastOrNull { currentTimeInSeconds >= it.hour * 3600 + it.minute * 60 }
-
+            // Next event follows the requested sequence:
+            // SUBUH -> TERBIT -> DHUHUR -> ASHAR -> MAGHRIB -> ISYA -> SUBUH (tomorrow).
+            // TERBIT is an event, not a fard prayer, but is intentionally shown between Subuh and Dhuhur.
             var nextFound = false
             var nextItem: PrayerScheduleItem? = null
             var minutesUntilNext = 0
@@ -196,7 +189,8 @@ class DefaultPrayerRepository(
                 "--:--:--"
             }
 
-            val displayPrayer = currentPrayer ?: nextItem
+            // The hero card must show the upcoming event, not the last prayer that passed.
+            val displayPrayer = nextItem
 
             val cal = Calendar.getInstance()
             cal.set(currentDate.year, currentDate.monthValue - 1, currentDate.dayOfMonth)
