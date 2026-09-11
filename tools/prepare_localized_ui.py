@@ -5,8 +5,12 @@ ROOT = Path(__file__).resolve().parents[1]
 APP_LANGUAGE = ROOT / "app/src/main/java/com/example/ui/localization/AppLanguage.kt"
 UI_ROOT = ROOT / "app/src/main/java/com/example/ui"
 
-# AppLanguage keeps Indonesian text as the stable translation key.
+# Keep the Indonesian UI spelling consistent: use "sholat" instead of "salat".
 source = APP_LANGUAGE.read_text(encoding="utf-8")
+source = source.replace("Salat", "Sholat").replace("salat", "sholat")
+APP_LANGUAGE.write_text(source, encoding="utf-8")
+
+# AppLanguage keeps Indonesian text as the stable translation key.
 keys = set(re.findall(r'^\s*"((?:[^"\\]|\\.)+)"\s+to\s+mapOf', source, re.MULTILINE))
 keys = {bytes(k, "utf-8").decode("unicode_escape") for k in keys}
 
