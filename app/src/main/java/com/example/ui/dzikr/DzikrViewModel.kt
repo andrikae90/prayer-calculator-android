@@ -31,13 +31,13 @@ class DzikrViewModel(
 ) : ViewModel() {
 
     private val vibrator = appContext.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-
-    // Simpan progres Tasbih secara lokal agar hitungan tidak kembali ke 0
-    // ketika aplikasi ditutup, di-background, atau dibuka kembali.
     private val tasbihPrefs = appContext.getSharedPreferences("tasbih_state", Context.MODE_PRIVATE)
 
     private val _selectedTab = MutableStateFlow(DzikrTab.TASBIH)
     val selectedTab: StateFlow<DzikrTab> = _selectedTab.asStateFlow()
+
+    private val _customPhrases = MutableStateFlow(loadCustomPhrases())
+    val customPhrases: StateFlow<List<String>> = _customPhrases.asStateFlow()
 
     private val _tasbihState = MutableStateFlow(
         TasbihState(
@@ -70,6 +70,16 @@ class DzikrViewModel(
         _selectedTab.value = tab
     }
 
+    fun addCustomPhrase(phrase: String) {
+        val cleaned = phrase.trim()
+        if (cleaned.isEmpty()) return
+        val current = _customPhrases.value
+        if (cleaned in current) return
+        val updated = current + cleaned
+        _customPhrases.value = updated
+        saveCustomPhrases(updated)
+    }
+
     fun incrementTasbih() {
         val current = _tasbihState.value
         val newCount = current.count + 1
@@ -77,17 +87,10 @@ class DzikrViewModel(
 
         if (targetReached) {
             triggerVibration(long = true)
-            _tasbihState.update {
-                it.copy(
-                    count = 0,
-                    totalRounds = it.totalRounds + 1
-                )
-            }
+            _tasbihState.update { it.copy(count = 0, totalRounds = it.totalRounds + 1) }
         } else {
             triggerVibration(long = false)
-            _tasbihState.update {
-                it.copy(count = newCount)
-            }
+            _tasbihState.update { it.copy(count = newCount) }
         }
         saveTasbihState()
     }
@@ -98,6 +101,7 @@ class DzikrViewModel(
     }
 
     fun setTasbihTarget(newTarget: Int) {
+        if (newTarget < 1) return
         _tasbihState.update { it.copy(target = newTarget, count = 0) }
         saveTasbihState()
     }
@@ -105,6 +109,17 @@ class DzikrViewModel(
     fun toggleVibration() {
         _tasbihState.update { it.copy(isVibrationEnabled = !it.isVibrationEnabled) }
         saveTasbihState()
+    }
+
+    private fun loadCustomPhrases(): List<String> {
+        return tasbihPrefs.getStringSet(KEY_CUSTOM_PHRASES, emptySet())
+            ?.toList()
+            ?.sorted()
+            ?: emptyList()
+    }
+
+    private fun saveCustomPhrases(phrases: List<String>) {
+        tasbihPrefs.edit().putStringSet(KEY_CUSTOM_PHRASES, phrases.toSet()).apply()
     }
 
     private fun saveTasbihState() {
@@ -138,5 +153,6 @@ class DzikrViewModel(
         const val KEY_TOTAL_ROUNDS = "total_rounds"
         const val KEY_VIBRATION = "vibration_enabled"
         const val KEY_SOUND = "sound_enabled"
+        const val KEY_CUSTOM_PHRASES = "custom_phrases"
     }
 }
