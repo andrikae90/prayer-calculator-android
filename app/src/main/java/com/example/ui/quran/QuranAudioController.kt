@@ -13,6 +13,8 @@ class QuranAudioController {
         private set
     var isLoading by mutableStateOf(false)
         private set
+    var isPlayingAll by mutableStateOf(false)
+        private set
 
     private var player: MediaPlayer? = null
     private var playlist: List<Int> = emptyList()
@@ -48,6 +50,7 @@ class QuranAudioController {
         playlistSurah = chapterNumber
         playlist = ayahNumbers
         playlistIndex = 0
+        isPlayingAll = true
         playPlaylistItem()
     }
 
@@ -60,6 +63,7 @@ class QuranAudioController {
         playlist = emptyList()
         playlistSurah = null
         playlistIndex = 0
+        isPlayingAll = false
     }
 
     private fun playPlaylistItem() {
@@ -113,7 +117,7 @@ class QuranAudioController {
             setOnErrorListener { _, _, _ ->
                 this@QuranAudioController.isLoading = false
                 this@QuranAudioController.isPlaying = false
-                if (advancePlaylist) {
+                if (advancePlaylist && this@QuranAudioController.playlist.isNotEmpty()) {
                     this@QuranAudioController.playlistIndex++
                     this@QuranAudioController.player?.release()
                     this@QuranAudioController.player = null
@@ -134,5 +138,9 @@ class QuranAudioController {
         isLoading = false
         isPlaying = false
         currentKey = null
+        playlist = emptyList()
+        playlistSurah = null
+        playlistIndex = 0
+        isPlayingAll = false
     }
 }
