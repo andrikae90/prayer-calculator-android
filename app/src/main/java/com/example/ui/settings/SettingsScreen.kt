@@ -77,386 +77,159 @@ fun SettingsScreen(
     )
 
     LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .testTag("settings_screen"),
+        modifier = modifier.fillMaxSize().testTag("settings_screen"),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header
         item {
-            Text(
-                text = "Pengaturan",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                text = "Sesuaikan preferensi waktu salat, tema, dan notifikasi",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text(text = "Pengaturan", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
+            Text(text = "Sesuaikan preferensi waktu salat, tema, dan notifikasi", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-
-        // Section: Waktu Salat & Lokasi
         item {
             SettingsGroupCard(title = "Waktu Salat & Lokasi") {
-                SettingsItem(
-                    icon = Icons.Filled.LocationOn,
-                    title = "Lokasi Saat Ini",
-                    subtitle = settings.cityName,
-                    onClick = { showLocationDialog = true }
-                )
+                SettingsItem(icon = Icons.Filled.LocationOn, title = "Lokasi Saat Ini", subtitle = settings.cityName, onClick = { showLocationDialog = true })
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                SettingsItem(
-                    icon = Icons.Filled.Mosque,
-                    title = "Metode Perhitungan",
-                    subtitle = settings.calculationMethod.title,
-                    onClick = { showMethodDialog = true }
-                )
+                SettingsItem(icon = Icons.Filled.Mosque, title = "Metode Perhitungan", subtitle = settings.calculationMethod.title, onClick = { showMethodDialog = true })
             }
         }
-
-        // Section: Notifikasi & Adzan
         item {
             SettingsGroupCard(title = "Notifikasi & Pengingat") {
-                SettingsSwitchItem(
-                    icon = Icons.Filled.Notifications,
-                    title = "Notifikasi Waktu Salat",
-                    subtitle = "Tampilkan pengingat saat masuk waktu salat",
-                    checked = settings.prayerNotificationEnabled,
-                    onCheckedChange = { viewModel.togglePrayerNotification(it) }
-                )
+                SettingsSwitchItem(icon = Icons.Filled.Notifications, title = "Notifikasi Waktu Salat", subtitle = "Tampilkan pengingat saat masuk waktu salat", checked = settings.prayerNotificationEnabled, onCheckedChange = { viewModel.togglePrayerNotification(it) })
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                SettingsSwitchItem(
-                    icon = Icons.Filled.VolumeUp,
-                    title = "Suara Adzan",
-                    subtitle = "Kumandangkan suara adzan saat waktu tiba",
-                    checked = settings.adzanSoundEnabled,
-                    onCheckedChange = { viewModel.toggleAdzanSound(it) }
-                )
+                SettingsSwitchItem(icon = Icons.Filled.VolumeUp, title = "Suara Adzan", subtitle = "Kumandangkan suara adzan saat waktu tiba", checked = settings.adzanSoundEnabled, onCheckedChange = { viewModel.toggleAdzanSound(it) })
             }
         }
-
-        // Section: Tampilan & Bahasa
         item {
             SettingsGroupCard(title = "Tampilan & Bahasa") {
-                SettingsItem(
-                    icon = Icons.Filled.Brightness4,
-                    title = "Tema Aplikasi",
-                    subtitle = settings.themeSetting.title,
-                    onClick = { showThemeDialog = true }
-                )
+                SettingsItem(icon = Icons.Filled.Brightness4, title = "Tema Aplikasi", subtitle = settings.themeSetting.title, onClick = { showThemeDialog = true })
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                SettingsItem(
-                    icon = Icons.Filled.Language,
-                    title = "Bahasa Antarmuka",
-                    subtitle = settings.appLanguage,
-                    onClick = { /* Bahasa Indonesia fixed */ }
-                )
+                SettingsItem(icon = Icons.Filled.Language, title = "Bahasa Antarmuka", subtitle = settings.appLanguage, onClick = { /* Bahasa Indonesia fixed */ })
             }
         }
-
-        // Section: Informasi & Privasi
         item {
             SettingsGroupCard(title = "Lainnya") {
-                SettingsItem(
-                    icon = Icons.Filled.Info,
-                    title = "Tentang Aplikasi",
-                    subtitle = "Versi 1.0 (Muslim Mas An)",
-                    onClick = { showAboutDialog = true }
-                )
+                SettingsItem(icon = Icons.Filled.Info, title = "Tentang Aplikasi", subtitle = "Versi 1.0.0", onClick = { showAboutDialog = true })
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                SettingsItem(
-                    icon = Icons.Filled.Lock,
-                    title = "Kebijakan Privasi",
-                    subtitle = "Keamanan data & privasi pengguna",
-                    onClick = { showPrivacyDialog = true }
-                )
+                SettingsItem(icon = Icons.Filled.Lock, title = "Kebijakan Privasi", subtitle = "Keamanan data & privasi pengguna", onClick = { showPrivacyDialog = true })
             }
         }
-
         item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 
-    // Dialog: Pilih Kota
     if (showLocationDialog) {
-        AlertDialog(
-            onDismissRequest = { showLocationDialog = false },
-            title = { Text("Pilih Kota / Lokasi") },
-            text = {
-                Column {
-                    popularCities.forEach { city ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    viewModel.updateCity(city)
-                                    showLocationDialog = false
-                                }
-                                .padding(vertical = 10.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = settings.cityName == city,
-                                onClick = {
-                                    viewModel.updateCity(city)
-                                    showLocationDialog = false
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = city, style = MaterialTheme.typography.bodyMedium)
-                        }
+        AlertDialog(onDismissRequest = { showLocationDialog = false }, title = { Text("Pilih Kota / Lokasi") }, text = {
+            Column {
+                popularCities.forEach { city ->
+                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { viewModel.updateCity(city); showLocationDialog = false }.padding(vertical = 10.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = settings.cityName == city, onClick = { viewModel.updateCity(city); showLocationDialog = false })
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = city, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showLocationDialog = false }) { Text("Tutup") }
             }
-        )
+        }, confirmButton = { TextButton(onClick = { showLocationDialog = false }) { Text("Tutup") } })
     }
 
-    // Dialog: Metode Perhitungan
     if (showMethodDialog) {
-        AlertDialog(
-            onDismissRequest = { showMethodDialog = false },
-            title = { Text("Metode Perhitungan") },
-            text = {
-                Column {
-                    CalculationMethod.values().forEach { method ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    viewModel.updateCalculationMethod(method)
-                                    showMethodDialog = false
-                                }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = settings.calculationMethod == method,
-                                onClick = {
-                                    viewModel.updateCalculationMethod(method)
-                                    showMethodDialog = false
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(text = method.title, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
-                                Text(text = method.description, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
+        AlertDialog(onDismissRequest = { showMethodDialog = false }, title = { Text("Metode Perhitungan") }, text = {
+            Column {
+                CalculationMethod.values().forEach { method ->
+                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { viewModel.updateCalculationMethod(method); showMethodDialog = false }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = settings.calculationMethod == method, onClick = { viewModel.updateCalculationMethod(method); showMethodDialog = false })
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(text = method.title, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
+                            Text(text = method.description, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showMethodDialog = false }) { Text("Tutup") }
             }
-        )
+        }, confirmButton = { TextButton(onClick = { showMethodDialog = false }) { Text("Tutup") } })
     }
 
-    // Dialog: Tema
     if (showThemeDialog) {
-        AlertDialog(
-            onDismissRequest = { showThemeDialog = false },
-            title = { Text("Pilih Tema Tampilan") },
-            text = {
-                Column {
-                    AppThemeSetting.values().forEach { theme ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    viewModel.updateTheme(theme)
-                                    showThemeDialog = false
-                                }
-                                .padding(vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = settings.themeSetting == theme,
-                                onClick = {
-                                    viewModel.updateTheme(theme)
-                                    showThemeDialog = false
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = theme.title, style = MaterialTheme.typography.bodyMedium)
-                        }
+        AlertDialog(onDismissRequest = { showThemeDialog = false }, title = { Text("Pilih Tema Tampilan") }, text = {
+            Column {
+                AppThemeSetting.values().forEach { theme ->
+                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { viewModel.updateTheme(theme); showThemeDialog = false }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = settings.themeSetting == theme, onClick = { viewModel.updateTheme(theme); showThemeDialog = false })
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = theme.title, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showThemeDialog = false }) { Text("Tutup") }
             }
-        )
+        }, confirmButton = { TextButton(onClick = { showThemeDialog = false }) { Text("Tutup") } })
     }
 
-    // Dialog: Tentang Aplikasi
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
-            title = { Text("Muslim Mas An") },
+            title = { Text("TEMAN SHOLAT") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(text = "Versi: 1.0.0 (Tahap 1 Foundation)")
-                    Text(text = "Aplikasi Muslim all-in-one yang dirancang bersih, tenang, tanpa iklan pelacak, dan ramah pengguna.")
-                    Text(
-                        text = "Dibangun menggunakan teknologi native Kotlin dan Jetpack Compose dengan Material 3 Design.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Text(text = "Versi 1.0.0")
+                    Text(text = "TEMAN SHOLAT adalah aplikasi pendamping ibadah yang membantu pengguna mendapatkan jadwal sholat berdasarkan lokasi, mengatur pengingat waktu sholat, serta menggunakan berbagai fitur pendukung ibadah dalam satu aplikasi.")
+                    Text(text = "Dikembangkan menggunakan Kotlin dan Jetpack Compose dengan desain Material 3.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { showAboutDialog = false }) { Text("Tutup") }
-            }
+            confirmButton = { TextButton(onClick = { showAboutDialog = false }) { Text("Tutup") } }
         )
     }
 
-    // Dialog: Kebijakan Privasi
     if (showPrivacyDialog) {
         AlertDialog(
             onDismissRequest = { showPrivacyDialog = false },
             title = { Text("Kebijakan Privasi") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(text = "Muslim Mas An menghormati privasi penuh pengguna:")
-                    Text(text = "• Izin lokasi hanya diakses saat pengguna meminta kalibrasi kompas kiblat atau perhitungan salat.")
-                    Text(text = "• Aplikasi tidak mengumpulkan, menjual, atau melacak data pribadi pengguna.")
-                    Text(text = "• Bekerja secara offline-first untuk menjaga ketenangan beribadah.")
+                    Text(text = "TEMAN SHOLAT menghormati privasi pengguna dan berupaya menggunakan data hanya untuk mendukung fungsi aplikasi.")
+                    Text(text = "• Data lokasi digunakan untuk menentukan lokasi pengguna dan menghitung jadwal sholat serta mendukung fitur yang membutuhkan posisi pengguna, seperti arah kiblat.")
+                    Text(text = "• Izin lokasi digunakan sesuai kebutuhan fitur dan tidak dimaksudkan untuk melacak pergerakan pengguna.")
+                    Text(text = "• Aplikasi tidak menjual data pribadi pengguna kepada pihak lain.")
+                    Text(text = "• Pengguna dapat memilih lokasi secara manual apabila tidak ingin menggunakan lokasi perangkat.")
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { showPrivacyDialog = false }) { Text("Tutup") }
-            }
+            confirmButton = { TextButton(onClick = { showPrivacyDialog = false }) { Text("Tutup") } }
         )
     }
 }
 
 @Composable
-private fun SettingsGroupCard(
-    title: String,
-    content: @Composable () -> Unit
-) {
+private fun SettingsGroupCard(title: String, content: @Composable () -> Unit) {
     Column {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
-        )
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
-                content()
-            }
+        Text(text = title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) { content() }
         }
     }
 }
 
 @Composable
-private fun SettingsItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { onClick() }
-            .padding(vertical = 12.dp, horizontal = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
+private fun SettingsItem(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { onClick() }.padding(vertical = 12.dp, horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.width(14.dp))
             Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(text = title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), color = MaterialTheme.colorScheme.onSurface)
+                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        Icon(
-            imageVector = Icons.Filled.ChevronRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
-        )
+        Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
     }
 }
 
 @Composable
-private fun SettingsSwitchItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp, horizontal = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
+private fun SettingsSwitchItem(icon: ImageVector, title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.width(14.dp))
             Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(text = title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), color = MaterialTheme.colorScheme.onSurface)
+                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                checkedTrackColor = MaterialTheme.colorScheme.primary
-            )
-        )
+        Switch(checked = checked, onCheckedChange = onCheckedChange, colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.onPrimary, checkedTrackColor = MaterialTheme.colorScheme.primary))
     }
 }
