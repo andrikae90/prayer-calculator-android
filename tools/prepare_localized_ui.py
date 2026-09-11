@@ -12,28 +12,40 @@ keys = {bytes(k, "utf-8").decode("unicode_escape") for k in keys}
 
 PREFIX = "com.example.ui.localization.AppLanguage.text(com.example.ui.localization.LocalAppLanguage.current, "
 
-def replacement(match):
+
+def localize_text(match):
     value = match.group(1)
     if value not in keys:
         return match.group(0)
-    return f'text = {PREFIX}"{value}")'
+    tail = match.group(2)
+    return f'text = {PREFIX}"{value}"){tail}'
+
+
+def localize_content_description(match):
+    value = match.group(1)
+    if value not in keys:
+        return match.group(0)
+    tail = match.group(2)
+    return f'contentDescription = {PREFIX}"{value}"){tail}'
 
 for path in UI_ROOT.rglob("*.kt"):
     if path == APP_LANGUAGE:
         continue
     text = path.read_text(encoding="utf-8")
 
-    # Localize literal Text(text = "...") calls whose keys already exist.
-    text = re.sub(r'text = "((?:[^"\\]|\\.)+)"\)', replacement, text)
+    # Handles both `Text(text = "...", ...)` and `Text(text = "...")`.
+    text = re.sub(
+        r'text = "((?:[^"\\]|\\.)+)"([,)])',
+        localize_text,
+        text,
+    )
 
     # Localize common accessibility labels that are direct translation keys.
-    def cd_repl(match):
-        value = match.group(1)
-        if value not in keys:
-            return match.group(0)
-        return f'contentDescription = {PREFIX}"{value}")'
-
-    text = re.sub(r'contentDescription = "((?:[^"\\]|\\.)+)"\)', cd_repl, text)
+    text = re.sub(
+        r'contentDescription = "((?:[^"\\]|\\.)+)"([,)])',
+        localize_content_description,
+        text,
+    )
 
     # Home's prayer-name fallback is data-driven but its displayName is an
     # Indonesian translation key, so pass it through the same localization map.
