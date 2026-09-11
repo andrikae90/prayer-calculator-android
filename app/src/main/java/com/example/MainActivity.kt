@@ -99,7 +99,13 @@ class MainActivity : ComponentActivity() {
     val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     val coarseGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
     if (fineGranted || coarseGranted) {
-      if (isLocationEnabled()) refreshGpsLocation() else showLocationDisabledDialog = true
+      if (isLocationEnabled()) {
+        // GPS/location service is ON. Try to refresh silently; a temporary null location
+        // must not be reported as "GPS OFF".
+        refreshGpsLocation()
+      } else {
+        showLocationDisabledDialog = true
+      }
     } else {
       locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
     }
@@ -107,13 +113,21 @@ class MainActivity : ComponentActivity() {
 
   private fun refreshGpsLocation() {
     if (isRefreshingLocation) return
+    if (!isLocationEnabled()) {
+      showLocationDisabledDialog = true
+      return
+    }
     isRefreshingLocation = true
     val container = (application as MuslimApp).container
     lifecycleScope.launch {
       try {
-        if (!isLocationEnabled()) { showLocationDisabledDialog = true; return@launch }
         val gpsLocation = container.locationProvider.getCurrentLocation()
-        if (gpsLocation == null) { showLocationDisabledDialog = true; return@launch }
+        if (gpsLocation == null) {
+          // Location can be temporarily unavailable even while GPS is enabled.
+          // Keep the existing/manual location and do not show a false GPS-disabled dialog.
+          return@launch
+        }
+        showLocationDisabledDialog = false
         container.locationProvider.setManualLocation(gpsLocation)
         container.settingsRepository.updateSettings { settings ->
           settings.copy(cityName = gpsLocation.cityName, latitude = gpsLocation.latitude, longitude = gpsLocation.longitude, elevationMeters = gpsLocation.elevationMeters)
@@ -127,7 +141,9 @@ class MainActivity : ComponentActivity() {
     super.onResume()
     val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     val coarseGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-    if ((fineGranted || coarseGranted) && isLocationEnabled()) refreshGpsLocation()
+    if (fineGranted || coarseGranted) {
+      if (isLocationEnabled()) refreshGpsLocation() else showLocationDisabledDialog = true
+    }
   }
 
   private fun schedulePrayerNotifications() {
