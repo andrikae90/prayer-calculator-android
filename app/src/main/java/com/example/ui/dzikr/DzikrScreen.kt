@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -243,7 +243,8 @@ private fun TasbihDigitalContent(
                     }
                 }) { Text("Simpan") }
             },
-            dismissButton = { TextButton(onClick = { showTargetDialog = false }) { Text("Batal") } }
+            dismissButton = { TextButton(onClick = { showTargetDialog = false }) { Text("Batal") }
+            }
         )
     }
 
