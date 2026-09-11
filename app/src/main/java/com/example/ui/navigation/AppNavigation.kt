@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -27,15 +28,13 @@ import com.example.ui.qibla.*
 import com.example.ui.quran.*
 import com.example.ui.settings.*
 import com.example.ui.splash.SplashScreen
+import com.example.ui.localization.AppLanguage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainAppScaffold(
-    container: AppContainer,
-    onRefreshLocation: () -> Unit,
-    isRefreshingLocation: Boolean = false,
-    navController: NavHostController = rememberNavController()
-) {
+fun MainAppScaffold(container: AppContainer, onRefreshLocation: () -> Unit, isRefreshingLocation: Boolean = false, navController: NavHostController = rememberNavController()) {
+    val settings by container.settingsRepository.settingsState.collectAsState()
+    val language = settings.appLanguage
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val isSplashScreen = currentRoute == Screen.Splash.route
@@ -43,42 +42,33 @@ fun MainAppScaffold(
     val isBottomNavVisible = !isSplashScreen && (isHomeScreen || currentRoute == Screen.Salat.route || currentRoute == Screen.Quran.route || currentRoute == Screen.More.route)
     val topBarTitle = when (currentRoute) {
         Screen.Home.route -> "TEMAN SHOLAT"
-        Screen.Qibla.route -> "Arah Kiblat"
-        Screen.Dua.route -> "Kumpulan Doa"
-        Screen.Dzikr.route -> "Dzikir & Tasbih"
-        Screen.Calendar.route -> "Kalender Hijriah"
-        Screen.Settings.route -> "Pengaturan"
+        Screen.Qibla.route -> AppLanguage.text(language, "Arah Kiblat")
+        Screen.Dua.route -> AppLanguage.text(language, "Kumpulan Doa")
+        Screen.Dzikr.route -> AppLanguage.text(language, "Dzikir & Tasbih")
+        Screen.Calendar.route -> AppLanguage.text(language, "Kalender Hijriah")
+        Screen.Settings.route -> AppLanguage.text(language, "Pengaturan")
         else -> null
     }
     Scaffold(
         topBar = { if (topBarTitle != null) TopAppBar(
             title = { Text(topBarTitle, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)) },
-            navigationIcon = { if (!isHomeScreen) IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali") } },
-            actions = {
-                if (isHomeScreen) {
-                    IconButton(
-                        onClick = { navController.navigate(Screen.Settings.route) },
-                        modifier = Modifier.testTag("manual_location_button")
-                    ) { Icon(Icons.Filled.LocationOn, contentDescription = "Ubah lokasi") }
-                    TextButton(
-                        onClick = onRefreshLocation,
-                        enabled = !isRefreshingLocation,
-                        modifier = Modifier.testTag("refresh_location_button")
-                    ) {
-                        if (isRefreshingLocation) {
-                            CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp).padding(2.dp), strokeWidth = 2.dp)
-                            Text("Mencari...")
-                        } else {
-                            Icon(Icons.Filled.Refresh, contentDescription = "Perbarui Lokasi", modifier = Modifier.padding(end = 8.dp))
-                            Text("Perbarui Lokasi")
-                        }
-                    }
+            navigationIcon = { if (!isHomeScreen) IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = AppLanguage.text(language, "Kembali")) } },
+            actions = { if (isHomeScreen) {
+                IconButton(onClick = { navController.navigate(Screen.Settings.route) }, modifier = Modifier.testTag("manual_location_button")) { Icon(Icons.Filled.LocationOn, contentDescription = AppLanguage.text(language, "Ubah lokasi")) }
+                TextButton(onClick = onRefreshLocation, enabled = !isRefreshingLocation, modifier = Modifier.testTag("refresh_location_button")) {
+                    if (isRefreshingLocation) { CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp).padding(2.dp), strokeWidth = 2.dp); Text(AppLanguage.text(language, "Mencari...")) }
+                    else { Icon(Icons.Filled.Refresh, contentDescription = AppLanguage.text(language, "Perbarui Lokasi"), modifier = Modifier.padding(end = 8.dp)); Text(AppLanguage.text(language, "Perbarui Lokasi")) }
                 }
-            },
+            } },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface, titleContentColor = MaterialTheme.colorScheme.onSurface, navigationIconContentColor = MaterialTheme.colorScheme.primary, actionIconContentColor = MaterialTheme.colorScheme.primary)
         ) },
         bottomBar = { if (isBottomNavVisible) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.primary, modifier = Modifier.testTag("main_bottom_nav")) {
-            bottomNavItems.forEach { item -> val selected = currentRoute == item.route; NavigationBarItem(selected = selected, onClick = { if (!selected) navController.navigate(item.route) { popUpTo(navController.graph.findStartDestination().id) { saveState = true }; launchSingleTop = true; restoreState = true } }, icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = item.title) }, label = { Text(item.title) }, modifier = Modifier.testTag("nav_item_${item.route}")) }
+            bottomNavItems.forEach { item ->
+                val selected = currentRoute == item.route
+                val titleKey = when (item.route) { "home" -> "Home"; "salat" -> "Salat"; "quran" -> "Al-Qur'an"; else -> "Lainnya" }
+                val title = AppLanguage.text(language, titleKey)
+                NavigationBarItem(selected = selected, onClick = { if (!selected) navController.navigate(item.route) { popUpTo(navController.graph.findStartDestination().id) { saveState = true }; launchSingleTop = true; restoreState = true } }, icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = title) }, label = { Text(title) }, modifier = Modifier.testTag("nav_item_${item.route}"))
+            }
         } }
     ) { innerPadding ->
         NavHost(navController, startDestination = Screen.Splash.route, modifier = Modifier.fillMaxSize().padding(innerPadding)) {
