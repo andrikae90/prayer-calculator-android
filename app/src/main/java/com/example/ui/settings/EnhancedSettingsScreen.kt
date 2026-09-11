@@ -4,9 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
 import android.media.AudioAttributes
-import android.media.AudioManager
 import android.media.MediaPlayer
-import android.media.ToneGenerator
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -37,8 +35,6 @@ fun EnhancedSettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Mo
     var showManualLocation by remember { mutableStateOf(false) }
     var showNotificationSettings by remember { mutableStateOf(false) }
     Box(modifier = modifier.fillMaxSize()) {
-        // Reserve space at the bottom so the two action buttons never cover
-        // Tema, Bahasa, or other settings on small screens.
         SettingsScreen(
             viewModel = viewModel,
             modifier = Modifier
@@ -87,7 +83,7 @@ private fun NotificationSettingsDialog(viewModel: SettingsViewModel, onDismiss: 
         when (sound) {
             PrayerNotificationSound.ADZAN_LENGKAP -> previewPlayer = playAudioPreview(context, R.raw.adzan_lengkap) { previewPlayer = null }
             PrayerNotificationSound.TAKBIR_SAJA -> previewPlayer = playAudioPreview(context, R.raw.takbir_saja) { previewPlayer = null }
-            PrayerNotificationSound.BIP_PANJANG -> playBeepPreview(context)
+            PrayerNotificationSound.BIP_PANJANG -> previewPlayer = playAudioPreview(context, R.raw.beep_panjang) { previewPlayer = null }
             PrayerNotificationSound.GETAR_SAJA -> vibratePreview(context)
             PrayerNotificationSound.TANPA_NOTIFIKASI -> Unit
         }
@@ -140,12 +136,6 @@ private fun playAudioPreview(context: Context, resourceId: Int, onFinished: () -
         start()
     }
 }.getOrNull()
-
-private fun playBeepPreview(context: Context) {
-    val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
-    tone.startTone(ToneGenerator.TONE_PROP_BEEP, 1200)
-    android.os.Handler(context.mainLooper).postDelayed({ tone.release() }, 1300)
-}
 
 private fun vibratePreview(context: Context) {
     val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return
