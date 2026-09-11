@@ -32,10 +32,22 @@ class DzikrViewModel(
 
     private val vibrator = appContext.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
 
+    // Simpan progres Tasbih secara lokal agar hitungan tidak kembali ke 0
+    // ketika aplikasi ditutup, di-background, atau dibuka kembali.
+    private val tasbihPrefs = appContext.getSharedPreferences("tasbih_state", Context.MODE_PRIVATE)
+
     private val _selectedTab = MutableStateFlow(DzikrTab.TASBIH)
     val selectedTab: StateFlow<DzikrTab> = _selectedTab.asStateFlow()
 
-    private val _tasbihState = MutableStateFlow(TasbihState(count = 0, target = 33))
+    private val _tasbihState = MutableStateFlow(
+        TasbihState(
+            count = tasbihPrefs.getInt(KEY_COUNT, 0),
+            target = tasbihPrefs.getInt(KEY_TARGET, 33),
+            totalRounds = tasbihPrefs.getInt(KEY_TOTAL_ROUNDS, 0),
+            isVibrationEnabled = tasbihPrefs.getBoolean(KEY_VIBRATION, true),
+            isSoundEnabled = tasbihPrefs.getBoolean(KEY_SOUND, false)
+        )
+    )
     val tasbihState: StateFlow<TasbihState> = _tasbihState.asStateFlow()
 
     val currentDzikrList: StateFlow<List<DzikrItem>> = _selectedTab
@@ -77,18 +89,33 @@ class DzikrViewModel(
                 it.copy(count = newCount)
             }
         }
+        saveTasbihState()
     }
 
     fun resetTasbih() {
         _tasbihState.update { it.copy(count = 0) }
+        saveTasbihState()
     }
 
     fun setTasbihTarget(newTarget: Int) {
         _tasbihState.update { it.copy(target = newTarget, count = 0) }
+        saveTasbihState()
     }
 
     fun toggleVibration() {
         _tasbihState.update { it.copy(isVibrationEnabled = !it.isVibrationEnabled) }
+        saveTasbihState()
+    }
+
+    private fun saveTasbihState() {
+        val state = _tasbihState.value
+        tasbihPrefs.edit()
+            .putInt(KEY_COUNT, state.count)
+            .putInt(KEY_TARGET, state.target)
+            .putInt(KEY_TOTAL_ROUNDS, state.totalRounds)
+            .putBoolean(KEY_VIBRATION, state.isVibrationEnabled)
+            .putBoolean(KEY_SOUND, state.isSoundEnabled)
+            .apply()
     }
 
     private fun triggerVibration(long: Boolean) {
@@ -103,5 +130,13 @@ class DzikrViewModel(
                 vibrator?.vibrate(if (long) 80L else 30L)
             }
         } catch (_: Exception) {}
+    }
+
+    private companion object {
+        const val KEY_COUNT = "count"
+        const val KEY_TARGET = "target"
+        const val KEY_TOTAL_ROUNDS = "total_rounds"
+        const val KEY_VIBRATION = "vibration_enabled"
+        const val KEY_SOUND = "sound_enabled"
     }
 }
