@@ -15,8 +15,12 @@ class QuranAudioController {
         private set
 
     private var player: MediaPlayer? = null
+    private var playlist: List<Int> = emptyList()
+    private var playlistSurah: Int? = null
+    private var playlistIndex = 0
 
     fun toggle(chapterNumber: Int, ayahNumber: Int) {
+        stopPlaylist()
         val key = "$chapterNumber:$ayahNumber"
         if (currentKey == key) {
             when {
@@ -38,7 +42,44 @@ class QuranAudioController {
         prepareAndPlay(chapterNumber, ayahNumber, key)
     }
 
-    private fun prepareAndPlay(chapterNumber: Int, ayahNumber: Int, key: String) {
+    fun playAll(chapterNumber: Int, ayahNumbers: List<Int>) {
+        if (ayahNumbers.isEmpty()) return
+        release()
+        playlistSurah = chapterNumber
+        playlist = ayahNumbers
+        playlistIndex = 0
+        playPlaylistItem()
+    }
+
+    fun stopAll() {
+        stopPlaylist()
+        release()
+    }
+
+    private fun stopPlaylist() {
+        playlist = emptyList()
+        playlistSurah = null
+        playlistIndex = 0
+    }
+
+    private fun playPlaylistItem() {
+        val chapterNumber = playlistSurah ?: return
+        if (playlistIndex >= playlist.size) {
+            stopPlaylist()
+            release()
+            return
+        }
+        val ayahNumber = playlist[playlistIndex]
+        val key = "$chapterNumber:$ayahNumber"
+        prepareAndPlay(chapterNumber, ayahNumber, key, advancePlaylist = true)
+    }
+
+    private fun prepareAndPlay(
+        chapterNumber: Int,
+        ayahNumber: Int,
+        key: String,
+        advancePlaylist: Boolean = false
+    ) {
         val chapter = chapterNumber.toString().padStart(3, '0')
         val ayah = ayahNumber.toString().padStart(3, '0')
         val url = "https://verses.quran.foundation/Alafasy/mp3/$chapter$ayah.mp3"
@@ -62,11 +103,24 @@ class QuranAudioController {
             }
             setOnCompletionListener {
                 this@QuranAudioController.isPlaying = false
+                if (advancePlaylist && this@QuranAudioController.playlist.isNotEmpty()) {
+                    this@QuranAudioController.playlistIndex++
+                    this@QuranAudioController.player?.release()
+                    this@QuranAudioController.player = null
+                    this@QuranAudioController.playPlaylistItem()
+                }
             }
             setOnErrorListener { _, _, _ ->
                 this@QuranAudioController.isLoading = false
                 this@QuranAudioController.isPlaying = false
-                release()
+                if (advancePlaylist) {
+                    this@QuranAudioController.playlistIndex++
+                    this@QuranAudioController.player?.release()
+                    this@QuranAudioController.player = null
+                    this@QuranAudioController.playPlaylistItem()
+                } else {
+                    release()
+                }
                 true
             }
             prepareAsync()
