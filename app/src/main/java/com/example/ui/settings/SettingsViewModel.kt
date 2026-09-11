@@ -47,7 +47,7 @@ class SettingsViewModel(
             try {
                 val location = locationProvider.getCurrentLocation()
                 if (location == null) {
-                    _locationError.value = "Lokasi GPS belum tersedia. Aktifkan lokasi dan pastikan izin lokasi diberikan."
+                    _locationError.value = "Lokasi GPS belum tersedia. Pastikan izin lokasi diberikan dan coba lagi."
                     return@launch
                 }
                 locationProvider.setManualLocation(location)
@@ -80,6 +80,7 @@ class SettingsViewModel(
     fun clearLocationResults() { _locationResults.value = emptyList(); _locationError.value = null }
     fun updateCalculationMethod(method: CalculationMethod) { settingsRepository.updateSettings { it.copy(calculationMethod = method) } }
     fun updateTheme(theme: AppThemeSetting) { settingsRepository.updateSettings { it.copy(themeSetting = theme) } }
+    fun updateLanguage(language: String) { settingsRepository.updateSettings { it.copy(appLanguage = language) } }
     fun togglePrayerNotification(enabled: Boolean) { settingsRepository.updateSettings { it.copy(prayerNotificationEnabled = enabled) } }
     fun toggleAdzanSound(enabled: Boolean) { settingsRepository.updateSettings { it.copy(adzanSoundEnabled = enabled) } }
     fun selectAdzanVoice(voice: String) { settingsRepository.updateSettings { it.copy(selectedAdzanVoice = voice) } }
