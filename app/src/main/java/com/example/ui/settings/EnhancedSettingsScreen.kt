@@ -37,14 +37,31 @@ fun EnhancedSettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Mo
     var showManualLocation by remember { mutableStateOf(false) }
     var showNotificationSettings by remember { mutableStateOf(false) }
     Box(modifier = modifier.fillMaxSize()) {
-        SettingsScreen(viewModel = viewModel)
+        // Reserve space at the bottom so the two action buttons never cover
+        // Tema, Bahasa, or other settings on small screens.
+        SettingsScreen(
+            viewModel = viewModel,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 112.dp)
+        )
         Column(
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            ExtendedFloatingActionButton(onClick = { showNotificationSettings = true }, icon = { Icon(Icons.Filled.Notifications, contentDescription = null) }, text = { Text("Atur Notifikasi") })
-            ExtendedFloatingActionButton(onClick = { showManualLocation = true }, icon = { Icon(Icons.Filled.LocationOn, contentDescription = null) }, text = { Text("Pilih Lokasi Manual") })
+            ExtendedFloatingActionButton(
+                onClick = { showNotificationSettings = true },
+                icon = { Icon(Icons.Filled.Notifications, contentDescription = null) },
+                text = { Text("Atur Notifikasi") }
+            )
+            ExtendedFloatingActionButton(
+                onClick = { showManualLocation = true },
+                icon = { Icon(Icons.Filled.LocationOn, contentDescription = null) },
+                text = { Text("Pilih Lokasi Manual") }
+            )
         }
     }
     if (showManualLocation) ManualLocationDialog(viewModel = viewModel, onDismiss = { showManualLocation = false })
@@ -100,7 +117,7 @@ private fun NotificationSettingsDialog(viewModel: SettingsViewModel, onDismiss: 
                     Text("Aktif per waktu sholat", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 }
                 item { NotificationToggle("Subuh", settings.subuhNotificationEnabled) { viewModel.toggleSubuhNotification(it) } }
-                item { NotificationToggle("Dzuhur", settings.dzuhurNotificationEnabled) { viewModel.toggleDzuhurNotification(it) } }
+                item { NotificationToggle("Dhuhur", settings.dzuhurNotificationEnabled) { viewModel.toggleDzuhurNotification(it) } }
                 item { NotificationToggle("Ashar", settings.asharNotificationEnabled) { viewModel.toggleAsharNotification(it) } }
                 item { NotificationToggle("Maghrib", settings.maghribNotificationEnabled) { viewModel.toggleMaghribNotification(it) } }
                 item { NotificationToggle("Isya", settings.isyaNotificationEnabled) { viewModel.toggleIsyaNotification(it) } }
