@@ -14,20 +14,28 @@ object AppLanguage {
     const val ARABIC = "العربية"
 
     fun isArabic(language: String): Boolean = language == ARABIC
+
     fun localeTag(language: String): String = when (language) {
-        ENGLISH -> "en"; MALAY -> "ms"; TURKISH -> "tr"; FRENCH -> "fr"; DUTCH -> "nl"; ARABIC -> "ar"; else -> "id"
+        ENGLISH -> "en"
+        MALAY -> "ms"
+        TURKISH -> "tr"
+        FRENCH -> "fr"
+        DUTCH -> "nl"
+        ARABIC -> "ar"
+        else -> "id"
     }
+
     fun text(language: String, key: String): String = when (language) {
-        ARABIC -> arabic[key] ?: key
         ENGLISH -> english[key] ?: key
         MALAY -> malay[key] ?: key
         TURKISH -> turkish[key] ?: key
         FRENCH -> french[key] ?: key
         DUTCH -> dutch[key] ?: key
+        ARABIC -> arabic[key] ?: key
         else -> key
     }
 
-    private val common = mapOf(
+    private val translations: Map<String, Map<String, String>> = mapOf(
         "Fitur Utama" to mapOf(ENGLISH to "Main Features", MALAY to "Ciri Utama", TURKISH to "Ana Özellikler", FRENCH to "Fonctionnalités principales", DUTCH to "Belangrijkste functies", ARABIC to "الميزات الرئيسية"),
         "Jadwal Salat Hari Ini" to mapOf(ENGLISH to "Today's Prayer Times", MALAY to "Waktu Solat Hari Ini", TURKISH to "Bugünün Namaz Vakitleri", FRENCH to "Horaires de prière aujourd'hui", DUTCH to "Gebedstijden vandaag", ARABIC to "أوقات الصلاة اليوم"),
         "Lihat Semua" to mapOf(ENGLISH to "View All", MALAY to "Lihat Semua", TURKISH to "Tümünü Gör", FRENCH to "Voir tout", DUTCH to "Alles bekijken", ARABIC to "عرض الكل"),
@@ -49,10 +57,7 @@ object AppLanguage {
         "Dzuhur" to mapOf(ENGLISH to "Dhuhr", MALAY to "Zohor", TURKISH to "Öğle", FRENCH to "Dhuhr", DUTCH to "Dhuhr", ARABIC to "الظهر"),
         "Ashar" to mapOf(ENGLISH to "Asr", MALAY to "Asar", TURKISH to "İkindi", FRENCH to "Asr", DUTCH to "Asr", ARABIC to "العصر"),
         "Maghrib" to mapOf(ENGLISH to "Maghrib", MALAY to "Maghrib", TURKISH to "Akşam", FRENCH to "Maghrib", DUTCH to "Maghrib", ARABIC to "المغرب"),
-        "Isya" to mapOf(ENGLISH to "Isha", MALAY to "Isyak", TURKISH to "Yatsı", FRENCH to "Isha", DUTCH to "Isha", ARABIC to "العشاء")
-    )
-
-    private val extra = mapOf(
+        "Isya" to mapOf(ENGLISH to "Isha", MALAY to "Isyak", TURKISH to "Yatsı", FRENCH to "Isha", DUTCH to "Isha", ARABIC to "العشاء"),
         "Pengaturan" to mapOf(ENGLISH to "Settings", MALAY to "Tetapan", TURKISH to "Ayarlar", FRENCH to "Paramètres", DUTCH to "Instellingen", ARABIC to "الإعدادات"),
         "Waktu Sholat & Lokasi" to mapOf(ENGLISH to "Prayer Times & Location", MALAY to "Waktu Solat & Lokasi", TURKISH to "Namaz Vakitleri ve Konum", FRENCH to "Horaires de prière et localisation", DUTCH to "Gebedstijden & locatie", ARABIC to "أوقات الصلاة والموقع"),
         "Notifikasi & Pengingat" to mapOf(ENGLISH to "Notifications & Reminders", MALAY to "Pemberitahuan & Peringatan", TURKISH to "Bildirimler ve Hatırlatıcılar", FRENCH to "Notifications et rappels", DUTCH to "Meldingen & herinneringen", ARABIC to "الإشعارات والتذكيرات"),
@@ -62,9 +67,9 @@ object AppLanguage {
         "Metode Perhitungan" to mapOf(ENGLISH to "Calculation Method", MALAY to "Kaedah Pengiraan", TURKISH to "Hesaplama Yöntemi", FRENCH to "Méthode de calcul", DUTCH to "Berekeningsmethode", ARABIC to "طريقة الحساب"),
         "Koreksi Waktu Sholat" to mapOf(ENGLISH to "Prayer Time Adjustment", MALAY to "Pelarasan Waktu Solat", TURKISH to "Namaz Vakti Ayarı", FRENCH to "Ajustement des horaires de prière", DUTCH to "Aanpassing gebedstijden", ARABIC to "تصحيح أوقات الصلاة"),
         "Notifikasi Waktu Sholat" to mapOf(ENGLISH to "Prayer Time Notifications", MALAY to "Pemberitahuan Waktu Solat", TURKISH to "Namaz Vakti Bildirimleri", FRENCH to "Notifications des horaires de prière", DUTCH to "Meldingen voor gebedstijden", ARABIC to "إشعارات أوقات الصلاة"),
-        "Suara Adzan" to mapOf(ENGLISH to "Adhan Sound", MALAY to "Bunyi Azan", TURKISH to "Ezan Sesi", FRENCH to "Son de l’adhan", DUTCH to "Adhan-geluid", ARABIC to "صوت الأذان"),
-        "Tema Aplikasi" to mapOf(ENGLISH to "App Theme", MALAY to "Tema Aplikasi", TURKISH to "Uygulama Teması", FRENCH to "Thème de l’application", DUTCH to "Appthema", ARABIC to "مظهر التطبيق"),
-        "Bahasa Antarmuka" to mapOf(ENGLISH to "Interface Language", MALAY to "Bahasa Antara Muka", TURKISH to "Arayüz Dili", FRENCH to "Langue de l’interface", DUTCH to "Interfacetaal", ARABIC to "لغة الواجهة"),
+        "Suara Adzan" to mapOf(ENGLISH to "Adhan Sound", MALAY to "Bunyi Azan", TURKISH to "Ezan Sesi", FRENCH to "Son de l'adhan", DUTCH to "Adhan-geluid", ARABIC to "صوت الأذان"),
+        "Tema Aplikasi" to mapOf(ENGLISH to "App Theme", MALAY to "Tema Aplikasi", TURKISH to "Uygulama Teması", FRENCH to "Thème de l'application", DUTCH to "Appthema", ARABIC to "مظهر التطبيق"),
+        "Bahasa Antarmuka" to mapOf(ENGLISH to "Interface Language", MALAY to "Bahasa Antara Muka", TURKISH to "Arayüz Dili", FRENCH to "Langue de l'interface", DUTCH to "Interfacetaal", ARABIC to "لغة الواجهة"),
         "Tentang Aplikasi" to mapOf(ENGLISH to "About App", MALAY to "Tentang Aplikasi", TURKISH to "Uygulama Hakkında", FRENCH to "À propos", DUTCH to "Over de app", ARABIC to "حول التطبيق"),
         "Kebijakan Privasi" to mapOf(ENGLISH to "Privacy Policy", MALAY to "Dasar Privasi", TURKISH to "Gizlilik Politikası", FRENCH to "Politique de confidentialité", DUTCH to "Privacybeleid", ARABIC to "سياسة الخصوصية"),
         "Tutup" to mapOf(ENGLISH to "Close", MALAY to "Tutup", TURKISH to "Kapat", FRENCH to "Fermer", DUTCH to "Sluiten", ARABIC to "إغلاق"),
@@ -83,16 +88,17 @@ object AppLanguage {
         "Ubah lokasi" to mapOf(ENGLISH to "Change location", MALAY to "Tukar lokasi", TURKISH to "Konumu değiştir", FRENCH to "Changer de position", DUTCH to "Locatie wijzigen", ARABIC to "تغيير الموقع")
     )
 
-    private fun baseMap(language: String): Map<String, String> = (common + extra).mapValues { (_, values) -> values[language] ?: "" }
-    private val english = baseMap(ENGLISH)
-    private val malay = baseMap(MALAY)
-    private val turkish = baseMap(TURKISH)
-    private val french = baseMap(FRENCH)
-    private val dutch = baseMap(DUTCH)
-    private val arabic = baseMap(ARABIC)
+    private fun mapFor(language: String): Map<String, String> = translations.mapValues { (_, values) -> values[language] ?: it.key }
+    private val english = mapFor(ENGLISH)
+    private val malay = mapFor(MALAY)
+    private val turkish = mapFor(TURKISH)
+    private val french = mapFor(FRENCH)
+    private val dutch = mapFor(DUTCH)
+    private val arabic = mapFor(ARABIC)
 }
 
 val LocalAppLanguage = compositionLocalOf { AppLanguage.INDONESIAN }
 
 @Composable
-fun localizedLayoutDirection(language: String): LayoutDirection = if (AppLanguage.isArabic(language)) LayoutDirection.Rtl else LayoutDirection.Ltr
+fun localizedLayoutDirection(language: String): LayoutDirection =
+    if (AppLanguage.isArabic(language)) LayoutDirection.Rtl else LayoutDirection.Ltr
