@@ -11,7 +11,7 @@ permissions:
 
 env:
   GRADLE_VERSION: "9.3.1"
-  KEYSTORE_PATH: "my-upload-key.jks"
+  KEYSTORE_PATH: "${{ github.workspace }}/my-upload-key.jks"
 
 jobs:
   build-release-aab:
