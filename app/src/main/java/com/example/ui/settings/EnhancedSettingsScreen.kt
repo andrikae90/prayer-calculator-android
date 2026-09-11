@@ -80,8 +80,8 @@ private fun NotificationSettingsDialog(viewModel: SettingsViewModel, onDismiss: 
         previewPlayer?.let { runCatching { if (it.isPlaying) it.stop() }; it.release() }
         previewPlayer = null
         when (sound) {
-            PrayerNotificationSound.ADZAN_LENGKAP -> playAudioPreview(context, R.raw.adzan_lengkap) { previewPlayer = null }
-            PrayerNotificationSound.TAKBIR_SAJA -> playAudioPreview(context, R.raw.takbir_saja) { previewPlayer = null }
+            PrayerNotificationSound.ADZAN_LENGKAP -> previewPlayer = playAudioPreview(context, R.raw.adzan_lengkap) { previewPlayer = null }
+            PrayerNotificationSound.TAKBIR_SAJA -> previewPlayer = playAudioPreview(context, R.raw.takbir_saja) { previewPlayer = null }
             PrayerNotificationSound.BIP_PANJANG -> playBeepPreview(context)
             PrayerNotificationSound.GETAR_SAJA -> vibratePreview(context)
             PrayerNotificationSound.TANPA_NOTIFIKASI -> Unit
@@ -140,8 +140,8 @@ private fun NotificationSettingsDialog(viewModel: SettingsViewModel, onDismiss: 
     )
 }
 
-private fun playAudioPreview(context: Context, resourceId: Int, onFinished: () -> Unit) {
-    runCatching {
+private fun playAudioPreview(context: Context, resourceId: Int, onFinished: () -> Unit): MediaPlayer? {
+    return runCatching {
         MediaPlayer.create(context, resourceId)?.apply {
             setAudioAttributes(
                 AudioAttributes.Builder()
@@ -155,7 +155,7 @@ private fun playAudioPreview(context: Context, resourceId: Int, onFinished: () -
             }
             start()
         }
-    }
+    }.getOrNull()
 }
 
 private fun playBeepPreview(context: Context) {
@@ -223,7 +223,7 @@ private fun ManualLocationDialog(viewModel: SettingsViewModel, onDismiss: () -> 
                 Text("Lokasi aktif: ${settings.cityName}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
             }
         },
-        confirmButton = { TextButton(onClick = { viewModel.clearLocationResults(); onDismiss() }) { Text("Tutup") }</TextButton>
+        confirmButton = { TextButton(onClick = { viewModel.clearLocationResults(); onDismiss() }) { Text("Tutup") } }
     )
 }
 
