@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.Mosque
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -57,12 +56,8 @@ import com.example.domain.model.AppThemeSetting
 import com.example.domain.model.CalculationMethod
 
 @Composable
-fun SettingsScreen(
-    viewModel: SettingsViewModel,
-    modifier: Modifier = Modifier
-) {
+fun SettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Modifier) {
     val settings by viewModel.settings.collectAsState()
-
     var showLocationDialog by remember { mutableStateOf(false) }
     var showMethodDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -71,23 +66,9 @@ fun SettingsScreen(
     var showPrivacyDialog by remember { mutableStateOf(false) }
     var showCorrectionDialog by remember { mutableStateOf(false) }
 
-    val popularCities = listOf(
-        "Jakarta, Indonesia",
-        "Surabaya, Jawa Timur",
-        "Bandung, Jawa Barat",
-        "Medan, Sumatera Utara",
-        "Makassar, Sulawesi Selatan",
-        "Semarang, Jawa Tengah",
-        "Yogyakarta, D.I. Yogyakarta",
-        "Palembang, Sumatera Selatan",
-        "Banda Aceh, Aceh"
-    )
+    val popularCities = listOf("Jakarta, Indonesia", "Surabaya, Jawa Timur", "Bandung, Jawa Barat", "Medan, Sumatera Utara", "Makassar, Sulawesi Selatan", "Semarang, Jawa Tengah", "Yogyakarta, D.I. Yogyakarta", "Palembang, Sumatera Selatan", "Banda Aceh, Aceh")
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize().testTag("settings_screen"),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    LazyColumn(modifier = modifier.fillMaxSize().testTag("settings_screen"), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             Text(text = "Pengaturan", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
             Text(text = "Sesuaikan preferensi waktu sholat, tema, dan notifikasi", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -157,26 +138,9 @@ fun SettingsScreen(
     }
 
     if (showCorrectionDialog) {
-        CorrectionTimeDialog(
-            subuh = settings.subuhOffsetMinutes,
-            dzuhur = settings.dzuhurOffsetMinutes,
-            ashar = settings.asharOffsetMinutes,
-            maghrib = settings.maghribOffsetMinutes,
-            isya = settings.isyaOffsetMinutes,
-            onSubuhChange = viewModel::updateSubuhOffset,
-            onDzuhurChange = viewModel::updateDzuhurOffset,
-            onAsharChange = viewModel::updateAsharOffset,
-            onMaghribChange = viewModel::updateMaghribOffset,
-            onIsyaChange = viewModel::updateIsyaOffset,
-            onReset = {
-                viewModel.updateSubuhOffset(0)
-                viewModel.updateDzuhurOffset(0)
-                viewModel.updateAsharOffset(0)
-                viewModel.updateMaghribOffset(0)
-                viewModel.updateIsyaOffset(0)
-            },
-            onDismiss = { showCorrectionDialog = false }
-        )
+        CorrectionTimeDialog(subuh = settings.subuhOffsetMinutes, dzuhur = settings.dzuhurOffsetMinutes, ashar = settings.asharOffsetMinutes, maghrib = settings.maghribOffsetMinutes, isya = settings.isyaOffsetMinutes, onSubuhChange = viewModel::updateSubuhOffset, onDzuhurChange = viewModel::updateDzuhurOffset, onAsharChange = viewModel::updateAsharOffset, onMaghribChange = viewModel::updateMaghribOffset, onIsyaChange = viewModel::updateIsyaOffset, onReset = {
+            viewModel.updateSubuhOffset(0); viewModel.updateDzuhurOffset(0); viewModel.updateAsharOffset(0); viewModel.updateMaghribOffset(0); viewModel.updateIsyaOffset(0)
+        }, onDismiss = { showCorrectionDialog = false })
     }
 
     if (showThemeDialog) {
@@ -195,12 +159,20 @@ fun SettingsScreen(
 
     if (showLanguageDialog) {
         AlertDialog(onDismissRequest = { showLanguageDialog = false }, title = { Text("Bahasa Antarmuka") }, text = {
-            Column {
-                listOf("Bahasa Indonesia", "English").forEach { language ->
-                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { viewModel.updateLanguage(language); showLanguageDialog = false }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState())) {
+                listOf(
+                    "Bahasa Indonesia",
+                    "English",
+                    "Bahasa Melayu",
+                    "Türkçe",
+                    "Français",
+                    "Nederlands",
+                    "العربية"
+                ).forEach { language ->
+                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { viewModel.updateLanguage(language); showLanguageDialog = false }.padding(vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = settings.appLanguage == language, onClick = { viewModel.updateLanguage(language); showLanguageDialog = false })
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(language)
+                        Text(language, style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
@@ -237,40 +209,18 @@ private fun correctionSummary(settings: com.example.domain.model.AppSettings): S
 }
 
 @Composable
-private fun CorrectionTimeDialog(
-    subuh: Int,
-    dzuhur: Int,
-    ashar: Int,
-    maghrib: Int,
-    isya: Int,
-    onSubuhChange: (Int) -> Unit,
-    onDzuhurChange: (Int) -> Unit,
-    onAsharChange: (Int) -> Unit,
-    onMaghribChange: (Int) -> Unit,
-    onIsyaChange: (Int) -> Unit,
-    onReset: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Koreksi Waktu Sholat") },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text("Sesuaikan waktu dalam menit. Nilai positif menambah waktu, nilai negatif mengurangi waktu.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                CorrectionRow("Subuh", subuh, onSubuhChange)
-                CorrectionRow("Dzuhur", dzuhur, onDzuhurChange)
-                CorrectionRow("Ashar", ashar, onAsharChange)
-                CorrectionRow("Maghrib", maghrib, onMaghribChange)
-                CorrectionRow("Isya", isya, onIsyaChange)
-                Text("Contoh: +2 berarti waktu ditambah 2 menit, -2 berarti dikurangi 2 menit.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Selesai") } },
-        dismissButton = { TextButton(onClick = onReset) { Text("Reset") } }
-    )
+private fun CorrectionTimeDialog(subuh: Int, dzuhur: Int, ashar: Int, maghrib: Int, isya: Int, onSubuhChange: (Int) -> Unit, onDzuhurChange: (Int) -> Unit, onAsharChange: (Int) -> Unit, onMaghribChange: (Int) -> Unit, onIsyaChange: (Int) -> Unit, onReset: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Koreksi Waktu Sholat") }, text = {
+        Column(modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Sesuaikan waktu dalam menit. Nilai positif menambah waktu, nilai negatif mengurangi waktu.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            CorrectionRow("Subuh", subuh, onSubuhChange)
+            CorrectionRow("Dzuhur", dzuhur, onDzuhurChange)
+            CorrectionRow("Ashar", ashar, onAsharChange)
+            CorrectionRow("Maghrib", maghrib, onMaghribChange)
+            CorrectionRow("Isya", isya, onIsyaChange)
+            Text("Contoh: +2 berarti waktu ditambah 2 menit, -2 berarti dikurangi 2 menit.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }, confirmButton = { TextButton(onClick = onDismiss) { Text("Selesai") } }, dismissButton = { TextButton(onClick = onReset) { Text("Reset") } })
 }
 
 @Composable
