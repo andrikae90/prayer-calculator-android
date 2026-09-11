@@ -26,6 +26,9 @@ jobs:
           java-version: "17"
           cache: gradle
 
+      - name: Prepare multilingual Compose UI
+        run: python3 tools/prepare_localized_ui.py
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
