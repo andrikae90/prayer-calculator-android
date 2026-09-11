@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,6 +15,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -81,7 +83,7 @@ class MainActivity : ComponentActivity() {
                 }) { Text(copy.continueText) }
               },
               dismissButton = {
-                Button(onClick = { showLocationDisclosure = false }) { Text(copy.laterText) }
+                TextButton(onClick = { openPrivacyPolicy() }) { Text(copy.privacyText) }
               }
             )
           }
@@ -194,17 +196,17 @@ class MainActivity : ComponentActivity() {
     val title: String,
     val message: String,
     val continueText: String,
-    val laterText: String
+    val privacyText: String
   )
 
   private fun locationDisclosureCopy(language: String): LocationDisclosureCopy = when (language) {
-    "English" -> LocationDisclosureCopy("Location access", "TEMAN SHOLAT uses your device location to calculate accurate prayer times, determine the Qibla direction, and show your local area. Your location is not used for advertising.", "Continue", "Not now")
-    "Bahasa Melayu" -> LocationDisclosureCopy("Akses lokasi", "TEMAN SHOLAT menggunakan lokasi peranti untuk mengira waktu solat yang tepat, menentukan arah kiblat dan memaparkan kawasan anda. Lokasi tidak digunakan untuk iklan.", "Teruskan", "Nanti")
-    "Türkçe" -> LocationDisclosureCopy("Konum erişimi", "TEMAN SHOLAT, doğru namaz vakitlerini hesaplamak, kıble yönünü belirlemek ve bölgenizi göstermek için cihaz konumunuzu kullanır. Konumunuz reklam için kullanılmaz.", "Devam et", "Şimdi değil")
-    "Français" -> LocationDisclosureCopy("Accès à la position", "TEMAN SHOLAT utilise la position de votre appareil pour calculer les horaires de prière, déterminer la direction de la Qibla et afficher votre région. Votre position n'est pas utilisée à des fins publicitaires.", "Continuer", "Plus tard")
-    "Nederlands" -> LocationDisclosureCopy("Locatietoegang", "TEMAN SHOLAT gebruikt uw apparaatlocatie om gebedstijden te berekenen, de qibla-richting te bepalen en uw regio te tonen. Uw locatie wordt niet voor advertenties gebruikt.", "Doorgaan", "Niet nu")
-    "العربية" -> LocationDisclosureCopy("الوصول إلى الموقع", "يستخدم TEMAN SHOLAT موقع جهازك لحساب أوقات الصلاة بدقة وتحديد اتجاه القبلة وعرض منطقتك. لا يُستخدم موقعك للإعلانات.", "متابعة", "ليس الآن")
-    else -> LocationDisclosureCopy("Akses lokasi", "TEMAN SHOLAT menggunakan lokasi perangkat untuk menghitung waktu sholat, menentukan arah kiblat, dan menampilkan wilayah Anda. Lokasi tidak digunakan untuk iklan. Anda juga dapat memilih lokasi secara manual.", "Lanjutkan", "Nanti")
+    "English" -> LocationDisclosureCopy("Location access", "TEMAN SHOLAT uses your device location to calculate accurate prayer times, determine the Qibla direction, and show your local area. Your location is not used for advertising.", "Continue", "Privacy policy")
+    "Bahasa Melayu" -> LocationDisclosureCopy("Akses lokasi", "TEMAN SHOLAT menggunakan lokasi peranti untuk mengira waktu solat yang tepat, menentukan arah kiblat dan memaparkan kawasan anda. Lokasi tidak digunakan untuk iklan.", "Teruskan", "Dasar privasi")
+    "Türkçe" -> LocationDisclosureCopy("Konum erişimi", "TEMAN SHOLAT, doğru namaz vakitlerini hesaplamak, kıble yönünü belirlemek ve bölgenizi göstermek için cihaz konumunuzu kullanır. Konumunuz reklam için kullanılmaz.", "Devam et", "Gizlilik politikası")
+    "Français" -> LocationDisclosureCopy("Accès à la position", "TEMAN SHOLAT utilise la position de votre appareil pour calculer les horaires de prière, déterminer la direction de la Qibla et afficher votre région. Votre position n'est pas utilisée à des fins publicitaires.", "Continuer", "Politique de confidentialité")
+    "Nederlands" -> LocationDisclosureCopy("Locatietoegang", "TEMAN SHOLAT gebruikt uw apparaatlocatie om gebedstijden te berekenen, de qibla-richting te bepalen en uw regio te tonen. Uw locatie wordt niet voor advertenties gebruikt.", "Doorgaan", "Privacybeleid")
+    "العربية" -> LocationDisclosureCopy("الوصول إلى الموقع", "يستخدم TEMAN SHOLAT موقع جهازك لحساب أوقات الصلاة بدقة وتحديد اتجاه القبلة وعرض منطقتك. لا يُستخدم موقعك للإعلانات.", "متابعة", "سياسة الخصوصية")
+    else -> LocationDisclosureCopy("Akses lokasi", "TEMAN SHOLAT menggunakan lokasi perangkat untuk menghitung waktu sholat, menentukan arah kiblat, dan menampilkan wilayah Anda. Lokasi tidak digunakan untuk iklan. Anda juga dapat memilih lokasi secara manual.", "Lanjutkan", "Kebijakan Privasi")
   }
 
   companion object {
