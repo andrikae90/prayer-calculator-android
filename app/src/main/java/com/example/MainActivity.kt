@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.domain.model.AppThemeSetting
 import com.example.domain.model.PrayerType
+import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.localizedLayoutDirection
 import com.example.ui.navigation.MainAppScaffold
 import com.example.ui.theme.MyApplicationTheme
@@ -56,7 +57,10 @@ class MainActivity : ComponentActivity() {
         AppThemeSetting.LIGHT -> false
       }
       MyApplicationTheme(darkTheme = isDarkTheme) {
-        CompositionLocalProvider(LocalLayoutDirection provides localizedLayoutDirection(settings.appLanguage)) {
+        CompositionLocalProvider(
+          LocalLayoutDirection provides localizedLayoutDirection(settings.appLanguage),
+          LocalAppLanguage provides settings.appLanguage
+        ) {
           MainAppScaffold(
             container = container,
             onRefreshLocation = { requestLocationPermissionIfNeeded() },
