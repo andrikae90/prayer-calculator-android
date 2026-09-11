@@ -4,7 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
-import android.provider.Settings
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
   private var isRefreshingLocation by mutableStateOf(false)
   private var showLocationDisabledDialog by mutableStateOf(false)
+  private var showLocationDisclosure by mutableStateOf(false)
 
   private val locationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
     val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true || permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
@@ -66,6 +67,24 @@ class MainActivity : ComponentActivity() {
             onRefreshLocation = { requestLocationPermissionIfNeeded() },
             isRefreshingLocation = isRefreshingLocation
           )
+          if (showLocationDisclosure) {
+            val copy = locationDisclosureCopy(settings.appLanguage)
+            AlertDialog(
+              onDismissRequest = { showLocationDisclosure = false },
+              title = { Text(copy.title) },
+              text = { Text(copy.message) },
+              confirmButton = {
+                Button(onClick = {
+                  getPreferences(MODE_PRIVATE).edit().putBoolean(LOCATION_DISCLOSURE_ACK, true).apply()
+                  showLocationDisclosure = false
+                  requestLocationPermissionIfNeeded()
+                }) { Text(copy.continueText) }
+              },
+              dismissButton = {
+                Button(onClick = { showLocationDisclosure = false }) { Text(copy.laterText) }
+              }
+            )
+          }
           if (showLocationDisabledDialog) {
             AlertDialog(
               onDismissRequest = { showLocationDisabledDialog = false },
@@ -78,8 +97,13 @@ class MainActivity : ComponentActivity() {
         }
       }
     }
+
     requestNotificationPermissionIfNeeded()
-    requestLocationPermissionIfNeeded()
+    if (!getPreferences(MODE_PRIVATE).getBoolean(LOCATION_DISCLOSURE_ACK, false)) {
+      showLocationDisclosure = true
+    } else {
+      requestLocationPermissionIfNeeded()
+    }
     schedulePrayerNotifications()
     lifecycleScope.launch {
       container.settingsRepository.settingsState.collect {
@@ -97,6 +121,10 @@ class MainActivity : ComponentActivity() {
 
   private fun openLocationSettings() { startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }
 
+  private fun openPrivacyPolicy() {
+    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_POLICY_URL)))
+  }
+
   private fun requestNotificationPermissionIfNeeded() {
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
       val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -105,6 +133,10 @@ class MainActivity : ComponentActivity() {
   }
 
   private fun requestLocationPermissionIfNeeded() {
+    if (!getPreferences(MODE_PRIVATE).getBoolean(LOCATION_DISCLOSURE_ACK, false)) {
+      showLocationDisclosure = true
+      return
+    }
     val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     val coarseGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
     if (fineGranted || coarseGranted) {
@@ -132,6 +164,7 @@ class MainActivity : ComponentActivity() {
 
   override fun onResume() {
     super.onResume()
+    if (!getPreferences(MODE_PRIVATE).getBoolean(LOCATION_DISCLOSURE_ACK, false)) return
     val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     val coarseGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
     if (fineGranted || coarseGranted) { if (isLocationEnabled()) refreshGpsLocation() else showLocationDisabledDialog = true }
@@ -155,5 +188,27 @@ class MainActivity : ComponentActivity() {
         else -> false
       } }.forEach { prayer -> container.notificationManager.schedulePrayerReminder(prayer, currentSettings.notificationSound) }
     }
+  }
+
+  private data class LocationDisclosureCopy(
+    val title: String,
+    val message: String,
+    val continueText: String,
+    val laterText: String
+  )
+
+  private fun locationDisclosureCopy(language: String): LocationDisclosureCopy = when (language) {
+    "English" -> LocationDisclosureCopy("Location access", "TEMAN SHOLAT uses your device location to calculate accurate prayer times, determine the Qibla direction, and show your local area. Your location is not used for advertising.", "Continue", "Not now")
+    "Bahasa Melayu" -> LocationDisclosureCopy("Akses lokasi", "TEMAN SHOLAT menggunakan lokasi peranti untuk mengira waktu solat yang tepat, menentukan arah kiblat dan memaparkan kawasan anda. Lokasi tidak digunakan untuk iklan.", "Teruskan", "Nanti")
+    "Türkçe" -> LocationDisclosureCopy("Konum erişimi", "TEMAN SHOLAT, doğru namaz vakitlerini hesaplamak, kıble yönünü belirlemek ve bölgenizi göstermek için cihaz konumunuzu kullanır. Konumunuz reklam için kullanılmaz.", "Devam et", "Şimdi değil")
+    "Français" -> LocationDisclosureCopy("Accès à la position", "TEMAN SHOLAT utilise la position de votre appareil pour calculer les horaires de prière, déterminer la direction de la Qibla et afficher votre région. Votre position n'est pas utilisée à des fins publicitaires.", "Continuer", "Plus tard")
+    "Nederlands" -> LocationDisclosureCopy("Locatietoegang", "TEMAN SHOLAT gebruikt uw apparaatlocatie om gebedstijden te berekenen, de qibla-richting te bepalen en uw regio te tonen. Uw locatie wordt niet voor advertenties gebruikt.", "Doorgaan", "Niet nu")
+    "العربية" -> LocationDisclosureCopy("الوصول إلى الموقع", "يستخدم TEMAN SHOLAT موقع جهازك لحساب أوقات الصلاة بدقة وتحديد اتجاه القبلة وعرض منطقتك. لا يُستخدم موقعك للإعلانات.", "متابعة", "ليس الآن")
+    else -> LocationDisclosureCopy("Akses lokasi", "TEMAN SHOLAT menggunakan lokasi perangkat untuk menghitung waktu sholat, menentukan arah kiblat, dan menampilkan wilayah Anda. Lokasi tidak digunakan untuk iklan. Anda juga dapat memilih lokasi secara manual.", "Lanjutkan", "Nanti")
+  }
+
+  companion object {
+    private const val LOCATION_DISCLOSURE_ACK = "location_disclosure_ack"
+    private const val PRIVACY_POLICY_URL = "https://github.com/andrikae90/prayer-calculator-android/blob/main/docs/privacy-policy.html"
   }
 }
