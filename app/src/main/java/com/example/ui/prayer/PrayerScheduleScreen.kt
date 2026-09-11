@@ -20,9 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -74,7 +72,6 @@ private fun PrayerScheduleContent(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Top Info & Date
         item {
             Card(
                 shape = RoundedCornerShape(20.dp),
@@ -134,7 +131,6 @@ private fun PrayerScheduleContent(
             }
         }
 
-        // Active Next Prayer Countdown Banner
         if (schedule.nextPrayer != null) {
             item {
                 Card(
@@ -184,38 +180,8 @@ private fun PrayerScheduleContent(
             }
         }
 
-        // Prayer Times List: Imsak, Subuh, Terbit, Dzuhur, Ashar, Maghrib, Isya
         items(schedule.prayers) { prayer ->
             PrayerScheduleItemCard(item = prayer)
-        }
-
-        // Architecture note card
-        item {
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Jadwal salat menggunakan arsitektur repository terabstraksi. Pada tahap lanjutan akan terhubung langsung dengan metode hisab Kemenag RI atau API hisab resmi berdasarkan koordinat GPS pengguna.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
         }
     }
 }
@@ -246,7 +212,6 @@ private fun PrayerScheduleItemCard(item: PrayerScheduleItem) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Status icon
                 Box(
                     modifier = Modifier
                         .size(36.dp)
