@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.ChevronRight
@@ -61,6 +63,7 @@ fun SettingsScreen(
     var showLocationDialog by remember { mutableStateOf(false) }
     var showMethodDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
 
@@ -83,10 +86,10 @@ fun SettingsScreen(
     ) {
         item {
             Text(text = "Pengaturan", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
-            Text(text = "Sesuaikan preferensi waktu salat, tema, dan notifikasi", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = "Sesuaikan preferensi waktu sholat, tema, dan notifikasi", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         item {
-            SettingsGroupCard(title = "Waktu Salat & Lokasi") {
+            SettingsGroupCard(title = "Waktu Sholat & Lokasi") {
                 SettingsItem(icon = Icons.Filled.LocationOn, title = "Lokasi Saat Ini", subtitle = settings.cityName, onClick = { showLocationDialog = true })
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 SettingsItem(icon = Icons.Filled.Mosque, title = "Metode Perhitungan", subtitle = settings.calculationMethod.title, onClick = { showMethodDialog = true })
@@ -94,7 +97,7 @@ fun SettingsScreen(
         }
         item {
             SettingsGroupCard(title = "Notifikasi & Pengingat") {
-                SettingsSwitchItem(icon = Icons.Filled.Notifications, title = "Notifikasi Waktu Salat", subtitle = "Tampilkan pengingat saat masuk waktu salat", checked = settings.prayerNotificationEnabled, onCheckedChange = { viewModel.togglePrayerNotification(it) })
+                SettingsSwitchItem(icon = Icons.Filled.Notifications, title = "Notifikasi Waktu Sholat", subtitle = "Tampilkan pengingat saat masuk waktu sholat", checked = settings.prayerNotificationEnabled, onCheckedChange = { viewModel.togglePrayerNotification(it) })
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 SettingsSwitchItem(icon = Icons.Filled.VolumeUp, title = "Suara Adzan", subtitle = "Kumandangkan suara adzan saat waktu tiba", checked = settings.adzanSoundEnabled, onCheckedChange = { viewModel.toggleAdzanSound(it) })
             }
@@ -103,7 +106,7 @@ fun SettingsScreen(
             SettingsGroupCard(title = "Tampilan & Bahasa") {
                 SettingsItem(icon = Icons.Filled.Brightness4, title = "Tema Aplikasi", subtitle = settings.themeSetting.title, onClick = { showThemeDialog = true })
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                SettingsItem(icon = Icons.Filled.Language, title = "Bahasa Antarmuka", subtitle = settings.appLanguage, onClick = { /* Bahasa Indonesia fixed */ })
+                SettingsItem(icon = Icons.Filled.Language, title = "Bahasa Antarmuka", subtitle = settings.appLanguage, onClick = { showLanguageDialog = true })
             }
         }
         item {
@@ -117,17 +120,34 @@ fun SettingsScreen(
     }
 
     if (showLocationDialog) {
-        AlertDialog(onDismissRequest = { showLocationDialog = false }, title = { Text("Pilih Kota / Lokasi") }, text = {
-            Column {
-                popularCities.forEach { city ->
-                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { viewModel.updateCity(city); showLocationDialog = false }.padding(vertical = 10.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = settings.cityName == city, onClick = { viewModel.updateCity(city); showLocationDialog = false })
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = city, style = MaterialTheme.typography.bodyMedium)
+        AlertDialog(
+            onDismissRequest = { showLocationDialog = false },
+            title = { Text("Pilih Kota / Lokasi") },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    popularCities.forEach { city ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { viewModel.updateCity(city); showLocationDialog = false }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = settings.cityName == city, onClick = { viewModel.updateCity(city); showLocationDialog = false })
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = city, style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
-            }
-        }, confirmButton = { TextButton(onClick = { showLocationDialog = false }) { Text("Tutup") } })
+            },
+            confirmButton = { TextButton(onClick = { showLocationDialog = false }) { Text("Tutup") } }
+        )
     }
 
     if (showMethodDialog) {
@@ -159,6 +179,32 @@ fun SettingsScreen(
                 }
             }
         }, confirmButton = { TextButton(onClick = { showThemeDialog = false }) { Text("Tutup") } })
+    }
+
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = { Text("Bahasa Antarmuka") },
+            text = {
+                Column {
+                    listOf("Bahasa Indonesia", "English").forEach { language ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { viewModel.updateLanguage(language); showLanguageDialog = false }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = settings.appLanguage == language, onClick = { viewModel.updateLanguage(language); showLanguageDialog = false })
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(language)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showLanguageDialog = false }) { Text("Tutup") } }
+        )
     }
 
     if (showAboutDialog) {
