@@ -3,6 +3,13 @@ package com.example.ui.settings
 import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.MediaPlayer
+import android.media.ToneGenerator
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.R
 import com.example.data.location.UserLocation
 import com.example.domain.model.PrayerNotificationSound
 
@@ -58,6 +66,28 @@ fun EnhancedSettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Mo
 @Composable
 private fun NotificationSettingsDialog(viewModel: SettingsViewModel, onDismiss: () -> Unit) {
     val settings by viewModel.settings.collectAsState()
+    val context = LocalContext.current
+    var previewPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            previewPlayer?.let { runCatching { if (it.isPlaying) it.stop() }; it.release() }
+            previewPlayer = null
+        }
+    }
+
+    fun preview(sound: PrayerNotificationSound) {
+        previewPlayer?.let { runCatching { if (it.isPlaying) it.stop() }; it.release() }
+        previewPlayer = null
+        when (sound) {
+            PrayerNotificationSound.ADZAN_LENGKAP -> playAudioPreview(context, R.raw.adzan_lengkap) { previewPlayer = null }
+            PrayerNotificationSound.TAKBIR_SAJA -> playAudioPreview(context, R.raw.takbir_saja) { previewPlayer = null }
+            PrayerNotificationSound.BIP_PANJANG -> playBeepPreview(context)
+            PrayerNotificationSound.GETAR_SAJA -> vibratePreview(context)
+            PrayerNotificationSound.TANPA_NOTIFIKASI -> Unit
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Pengaturan Notifikasi", fontWeight = FontWeight.Bold) },
@@ -65,14 +95,26 @@ private fun NotificationSettingsDialog(viewModel: SettingsViewModel, onDismiss: 
             LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.heightIn(max = 520.dp)) {
                 item {
                     Text("Pilihan suara", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    Text("Berlaku untuk waktu salat yang notifikasinya aktif.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Tekan pilihan suara untuk mendengarkan contoh audio. Pilihan tetap tersimpan sampai Anda menekan Selesai.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 items(PrayerNotificationSound.values().toList()) { sound ->
                     Row(
-                        modifier = Modifier.fillMaxWidth().clickable { viewModel.selectNotificationSound(sound) }.padding(vertical = 6.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.selectNotificationSound(sound)
+                                preview(sound)
+                            }
+                            .padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        RadioButton(selected = settings.notificationSound == sound, onClick = { viewModel.selectNotificationSound(sound) })
+                        RadioButton(
+                            selected = settings.notificationSound == sound,
+                            onClick = {
+                                viewModel.selectNotificationSound(sound)
+                                preview(sound)
+                            }
+                        )
                         Spacer(Modifier.width(8.dp))
                         Text(sound.title)
                     }
@@ -86,18 +128,50 @@ private fun NotificationSettingsDialog(viewModel: SettingsViewModel, onDismiss: 
                 item { NotificationToggle("Ashar", settings.asharNotificationEnabled) { viewModel.toggleAsharNotification(it) } }
                 item { NotificationToggle("Maghrib", settings.maghribNotificationEnabled) { viewModel.toggleMaghribNotification(it) } }
                 item { NotificationToggle("Isya", settings.isyaNotificationEnabled) { viewModel.toggleIsyaNotification(it) } }
-                item {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Catatan: audio Adzan lengkap dan Takbir saja belum berbunyi sampai file audio yang berlisensi ditambahkan ke aplikasi. Bip panjang dan getar sudah disiapkan.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Selesai") } }
+        confirmButton = {
+            TextButton(onClick = {
+                previewPlayer?.let { runCatching { if (it.isPlaying) it.stop() }; it.release() }
+                previewPlayer = null
+                onDismiss()
+            }) { Text("Selesai") }
+        }
     )
+}
+
+private fun playAudioPreview(context: Context, resourceId: Int, onFinished: () -> Unit) {
+    runCatching {
+        MediaPlayer.create(context, resourceId)?.apply {
+            setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+            )
+            setOnCompletionListener {
+                release()
+                onFinished()
+            }
+            start()
+        }
+    }
+}
+
+private fun playBeepPreview(context: Context) {
+    val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
+    tone.startTone(ToneGenerator.TONE_PROP_BEEP, 1200)
+    android.os.Handler(context.mainLooper).postDelayed({ tone.release() }, 1300)
+}
+
+private fun vibratePreview(context: Context) {
+    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 500, 250, 500), -1))
+    } else {
+        @Suppress("DEPRECATION")
+        vibrator.vibrate(longArrayOf(0, 500, 250, 500), -1)
+    }
 }
 
 @Composable
@@ -149,7 +223,7 @@ private fun ManualLocationDialog(viewModel: SettingsViewModel, onDismiss: () -> 
                 Text("Lokasi aktif: ${settings.cityName}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
             }
         },
-        confirmButton = { TextButton(onClick = { viewModel.clearLocationResults(); onDismiss() }) { Text("Tutup") } }
+        confirmButton = { TextButton(onClick = { viewModel.clearLocationResults(); onDismiss() }) { Text("Tutup") }</TextButton>
     )
 }
 
